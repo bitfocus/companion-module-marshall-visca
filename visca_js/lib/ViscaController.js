@@ -13,6 +13,13 @@ const requestSet = {
     }
 }
 
+class AbstractConnection {
+    constructor (send, onReceive) {
+        this.send = send
+        this.onReceive = onReceive
+    }
+}
+
 class ViscaController {
     static useUdp(cam_ip, cam_port=52381, address=1, n_sockets=2) {
         const dgram = require('dgram')
@@ -35,23 +42,20 @@ class ViscaController {
 
         function send (message) {
             console.log(`Sent: ${Buffer.from(message).toString('hex').toUpperCase().match(/../g).join(' ')}`)
-            server.send(message, cam_port, cam_ip);
+            server.send(message, cam_port, cam_ip)
         }
         
-        function listen(receiver) {
+        function onReceive (receiver) {
             server.on('message', (message, remoteInfo) => {
                  // Needed as replacement for server.connect
-                if (remoteInfo.address == cam_ip & remoteInfo.port == cam_port)  {
+                if (remoteInfo.address == cam_ip & remoteInfo.port == cam_port) {
                     receiver(message)
                 }
             })
         }
 
-        let connection = {
-            send: send,
-            listen: listen
-        }
-
+        let connection = new AbstractConnection(send, onReceive)
+        
         return new this.prototype.constructor(connection, address, n_sockets)
     }
 
@@ -61,7 +65,7 @@ class ViscaController {
         this.n_sockets = n_sockets
         this.address = address
         this._send = connection.send
-        connection.listen(this._recive.bind(this))
+        connection.onReceive(this._recive.bind(this))
 
         this._requestSet = utils.decompressRequestSet(requestSet)
 
@@ -101,7 +105,7 @@ class ViscaController {
         try {
             var sequenceNumber = utils.byteArrayToUint(data.slice(4, 8));
         } catch (error) {
-            throw SyntaxError('Visca Synatx Error')
+            throw SyntaxError('Visca Syntax Error')
         }
         if (!this.awaitedMessages.hasOwnProperty(sequenceNumber)) {
             console.log(`Received message with unknown sequence number: ${sequenceNumber}`)
@@ -112,20 +116,20 @@ class ViscaController {
         try {
             var type = data.slice(0, 2);
         } catch (error) {
-            throw SyntaxError('Visca Synatx Error')
+            throw SyntaxError('Visca Syntax Error')
         }
         if (Buffer.from(message.expectedType).compare(type) != 0) {
-            throw SyntaxError('Visca Synatx Error: Unexpected payload type');
+            throw SyntaxError('Visca Syntax Error: Unexpected payload type');
         }
 
         try {
             let payloadLength = utils.byteArrayToUint(data.slice(2, 4));
             var payload = data.slice(8, 8 + payloadLength);
         } catch (error) {
-            throw SyntaxError('Visca Synatx Error: Package size')
+            throw SyntaxError('Visca Syntax Error: Package size')
         }
         
-        message.receiveReply([...payload])
+        message.receiveReply([...payload]) // Convert Uint8Array to number array
     }
 
     sendViscaCommand(commandName, parameters={}) {

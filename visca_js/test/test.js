@@ -14,10 +14,10 @@ const promiseWithTimeout = (timeoutMs, promise, failureMessage) => {
   }); 
 }
 
-const MarshallController = require('./lib/MarshallController')
+const MarshallController = require('../lib/MarshallController')
 
 let ip = '192.168.102.33'
-// ip = '192.168.178.43';
+ip = '192.168.178.43';
 let s = MarshallController.useUdp(ip)
 
 /*let msg = s.sendViscaCommand(['CAM_Power', 'On'])
@@ -39,7 +39,7 @@ msg.completion.then((value) => console.log('Angegangen'), (err) => console.log('
 
 let success = data => console.log(`Succeded ${JSON.stringify(data)}`)
 let error = data => console.log(`Failed ${JSON.stringify(data)}`)
-s.sendViscaCommand(['CAM_Power', 'On']).completion.then(success).catch(error).finally(() => {
+s.sendViscaCommand(['CAM_Power', 'On']).completion.then(success).catch(error).then(() => {
 	// s.sendViscaCommand(['CAM_Memory', 'Set'], {'Memory Number': 130}).completion.then(success).catch(error).finally(() => {
 		// let recall1 = s.sendViscaCommand(['CAM_Memory', 'Recall'], {'Memory Number': 1})
 		// recall1.completion.then(success).catch(error)
