@@ -1,6 +1,6 @@
 var instance_skel = require('../../instance_skel');
-var MarshallController = require('visca_js');
-const { options } = require('marked');
+console.log('test')
+var MarshallController = require('./visca_js/index');
 var debug;
 var log;
 
