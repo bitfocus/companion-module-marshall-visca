@@ -17,7 +17,7 @@ const promiseWithTimeout = (timeoutMs, promise, failureMessage) => {
 const MarshallController = require('../lib/MarshallController')
 
 let ip = '192.168.102.33'
-// ip = '192.168.178.43';
+ip = '192.168.178.43';
 let s = MarshallController.useUdp(ip)
 
 /*let msg = s.sendViscaCommand(['CAM_Power', 'On'])
