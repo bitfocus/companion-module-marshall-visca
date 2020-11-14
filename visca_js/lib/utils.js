@@ -28,7 +28,7 @@ exports.byteArrayToUint = function (byteArray) {
  * @return {Uint8Array}      Return array of integers between 0 and 255.
  */
 exports.uintToByteArray = function (integer, length) {
-    let int_array = Array.from({length: length}, (_, i) => (integer >>> (8 * (length - i - 1))) % 256)
+    let int_array = Array.from({ length: length }, (_, ind) => (integer >>> (8 * (length - ind - 1))) % 256)
     return new Uint8Array(int_array)
 }
 
@@ -72,6 +72,13 @@ exports.byteArrayToHexArray = function (byteArray) {
     return byteArray.reduce((hexArray, byte) => hexArray.concat(exports.uintToHexArray(byte)), [])
 }
 
+exports.hexArrayToByteArray = function (hexArray) {
+    if (hexArray.length % 2 !== 0) {
+        hexArray.unshift(0)
+    }
+    return Array.from({ length: hexArray.length / 2 }, (_, ind) => 16 * hexArray[2 * ind] + hexArray[2 * ind + 1])
+}
+
 /**
  * Converts a array of bytes into a string of hexadezimal digits.
  * 
@@ -86,6 +93,11 @@ exports.byteArrayToHexArray = function (byteArray) {
 exports.byteArrayToHexString = function (byteArray, spacer=' ') {
     let hexArray = exports.byteArrayToHexArray(byteArray)
     return exports.hexArrayToHexString(hexArray, spacer)
+}
+
+exports.hexStringToByteArray = function (hexString) {
+    let hexArray = exports.hexStringToHexArray(hexString)
+    return exports.hexArrayToByteArray(hexArray)
 }
 
 /**
@@ -104,6 +116,11 @@ exports.hexArrayToHexString = function (hexArray, spacer=' ') {
     return hexCharArray.join('').match(/../g).join(spacer)
 }
 
+exports.hexStringToHexArray = function (hexString) {
+    let hexCharArray = hexString.replace(/\s+/g, '').split('')
+    return hexCharArray.map(hexChar => parseInt(hexChar, 16))
+}
+
 /**
  * Get the first key matching the given value in an object
  *  
@@ -113,6 +130,14 @@ exports.hexArrayToHexString = function (hexArray, spacer=' ') {
  */
 exports.getKeyByValue = function (object, value) {
     return Object.keys(object).find(key => object[key] === value)
+}
+
+exports.getObjectByKeyValuePair = function (array, key, value) {
+    return array.find(object => object[key] === value)
+}
+
+exports.itemArrayToValueArray = function (itemArray, key) {
+    return itemArray.map(item => item[key])
 }
 
 /**
