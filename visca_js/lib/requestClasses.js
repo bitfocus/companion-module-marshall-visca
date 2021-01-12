@@ -305,71 +305,77 @@ class ParameterGroup {
 }
 
 class PacketStruct {
-    constructor(prefix, postfix) {
+    constructor(prefix, postfix, type) {
         this.prefix = prefix
         this.postfix = postfix
+        this.type = type
     }
 
-    createChildStruct(prefix, postfix) {
+    createChildStruct(prefix, postfix, type=this.type) {
         const newPrefix = Pattern.concat(this.prefix, prefix)
         const newPostfix = Pattern.concat(postfix, this.postfix)
 
-        return new PacketStruct(newPrefix, newPostfix)
+        return new PacketStruct(newPrefix, newPostfix, type)
     }
 
-    createChild(name, core, comment) {
+    createChild(name, core, comment, type=this.type) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
-        return new Packet(name, pattern, comment)
+        return new Packet(name, type, pattern, comment)
     }
 }
 
 class CallStruct extends PacketStruct {
-    constructor(prefix, postfix, answers=[], errors=[], answerStruct, errorStruct)  {
-        super(prefix, postfix)
+    constructor(prefix, postfix, type, replies=[], replyStruct)  {
+        super(prefix, postfix, type)
 
-        this.answers = answers
-        this.errors = errors
-        this.answerStruct = answerStruct
-        this.errorStruct = errorStruct
+        this.replies = replies
+        this.replyStruct = replyStruct
     }
 
-    createChildStruct(prefix, postfix, answers=[], errors=[], answerPrefix, answerPostfix, errorPrefix, errorPostfix) {
+    createChildStruct(prefix, postfix, type=this.type, replies=[], replyPrefix, replyPostfix) {
         const childPrefix = Pattern.concat(this.prefix, prefix)
         const childPostfix = Pattern.concat(postfix, this.postfix)
 
-        const childAnswers = [...this.answers, ...answers]
-        const childErrors = [...this.errors, ...errors]
-
-        const childAnswerStruct = this.answerStruct.createChildStruct(answerPrefix, answerPostfix)
-        const childErrorStruct = this.errorStruct.createChildStruct(errorPrefix, errorPostfix)
-
-        return new CallStruct(childPrefix, childPostfix, childAnswers, childErrors, childAnswerStruct, childErrorStruct)
+        const childReplies = [...this.replies, ...replies]
+        
+        const childReplyStruct = this.replyStruct.createChildStruct(replyPrefix, replyPostfix)
+        
+        return new CallStruct(childPrefix, childPostfix, type, childReplies, childReplyStruct)
     }
 
-    createChild(name, core, comment, answers=[], errors=[]) {
+    createChild(name, core, comment, type=this.type, replies=[]) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
-        const childAnswers = [...this.answers, ...answers]
-        const childErrors = [...this.errors, ...errors]
-
-        return new Call(name, pattern, comment, childAnswers, childErrors)
+        const childReplies = [...this.replies, ...replies]
+        
+        return new Call(name, type, pattern, comment, childReplies)
     }
 }
 
 class Packet {
-    constructor(name, pattern, comment) {
+    static types = Object.freeze({
+        ERROR: 'Error',
+        ACK: 'Ack',
+        COMPLETION: 'Completion',
+        ANSWER: 'Answer',
+        COMMAND: 'Command',
+        INQUERY: 'Inquery',
+        DEVICE_SETTING_COMMAND: 'Device Setting Command'
+    })
+
+    constructor(name, type, pattern, comment) {
         this.name = name
+        this.type = type
         this.pattern = pattern
         this.comment = comment
     }
 }
 
 class Call extends Packet {
-    constructor(name, request, comment, answers, errors) {
-        super(name, request)
-        this.answers = answers
-        this.errors = errors
+    constructor(name, type, pattern, comment, replies) {
+        super(name, type, pattern, comment)
+        this.replies = replies
     }
 }
 

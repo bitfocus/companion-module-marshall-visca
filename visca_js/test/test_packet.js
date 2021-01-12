@@ -83,35 +83,35 @@ testCoder(senderAddress, { 'Address': 1 }, [ 0x9 ])
 testCoder(receiverAddress, { 'Address': 3 }, [ 0x3 ])
 testCoder(socket, { 'Socket': 2 }, [ 0x2 ])
 
-const answerErrorStruct = new PacketStruct(
+const replyStruct = new PacketStruct(
     new Pattern('X0', [ new Match('X', senderAddress) ]),
     new Pattern('FF')
 )
 
-const errors = [
-    answerErrorStruct.createChild('Syntax Error', new Pattern('60 02')),
-    answerErrorStruct.createChild('Command buffer full', new Pattern('60 03')),
-    answerErrorStruct.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket))),
-    answerErrorStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket))),
+const replies = [
+    replyStruct.createChild('Syntax Error', new Pattern('60 02'), undefined, Packet.types.ERROR),
+    replyStruct.createChild('Command buffer full', new Pattern('60 03'), undefined, Packet.types.ERROR),
+    replyStruct.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket)), undefined, Packet.types.ERROR),
+    replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.types.ERROR),
 ]
 
 const requestSet = new CallStruct(
     new Pattern('8x', [ new Match('x', receiverAddress) ]),
     new Pattern('FF'),
     undefined,
-    errors,
-    answerErrorStruct,
-    answerErrorStruct
+    replies,
+    replyStruct
 )
 
 const command = requestSet.createChildStruct(
     new Pattern('01'),
     undefined,
     [
-        requestSet.answerStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket))),
-        requestSet.answerStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket))),
+        requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.types.ACK),
+        requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.types.COMPLETION),
+        requestSet.replyStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.types.ERROR) 
     ],
-    [ requestSet.errorStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket))) ]
+    Packet.types.COMMAND
 )
 
 const power = command.createChild('Power', Pattern.concat(new Pattern('04 00'), Pattern.fromParameterGroup(powerMode)))
@@ -126,4 +126,4 @@ const focus_farVariable = focus.createChild('Far (Variable)', new Pattern('08 2p
 const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 3p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
 
-
+console.log(focus_direct.pattern.writePayload({ 'Address': 2, 'Focus Position': 234 }))
