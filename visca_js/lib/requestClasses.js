@@ -314,13 +314,13 @@ class PacketStruct {
         const newPrefix = Pattern.concat(this.prefix, prefix)
         const newPostfix = Pattern.concat(postfix, this.postfix)
 
-        return PacketStruct(newPrefix, newPostfix)
+        return new PacketStruct(newPrefix, newPostfix)
     }
 
-    createChild(core) {
+    createChild(name, core, comment) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
-        return Packet(pattern)
+        return new Packet(name, pattern, comment)
     }
 }
 
@@ -344,28 +344,29 @@ class CallStruct extends PacketStruct {
         const childAnswerStruct = this.answerStruct.createChildStruct(answerPrefix, answerPostfix)
         const childErrorStruct = this.errorStruct.createChildStruct(errorPrefix, errorPostfix)
 
-        return CallStruct(childPrefix, childPostfix, childAnswers, childErrors, childAnswerStruct, childErrorStruct)
+        return new CallStruct(childPrefix, childPostfix, childAnswers, childErrors, childAnswerStruct, childErrorStruct)
     }
 
-    createChild(core, answers, errors) {
+    createChild(name, core, comment, answers=[], errors=[]) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
         const childAnswers = [...this.answers, ...answers]
         const childErrors = [...this.errors, ...errors]
 
-        return Call('', pattern, childAnswers, childErrors)
+        return new Call(name, pattern, comment, childAnswers, childErrors)
     }
 }
 
 class Packet {
-    constructor(name, pattern) {
+    constructor(name, pattern, comment) {
         this.name = name
         this.pattern = pattern
+        this.comment = comment
     }
 }
 
 class Call extends Packet {
-    constructor(name, request, answers, errors) {
+    constructor(name, request, comment, answers, errors) {
         super(name, request)
         this.answers = answers
         this.errors = errors
@@ -390,11 +391,14 @@ class Match {
 }
 
 class Pattern {
-    constructor(patternString, matchArray) {
+    constructor(patternString, matchArray=[]) {
         let charArray = patternString.replace(/\s+/g, '').split('')
+        if (matchArray instanceof Match) {
+            matchArray = [ matchArray ]
+        }
         let markerDict = {}
-        
         this.parameterGroups = new Set()
+        
         for (const match of matchArray) {
             this.parameterGroups.add(match.parameterGroup)
 
@@ -412,11 +416,21 @@ class Pattern {
         this.payloadTemplate = charArray.map((char) => {
             let hex = parseInt(char, 16)
             if (isNaN(hex)) {
+                if (!markerDict[char].length) { throw new Error('Pattern string and match array do not fit')}
                 return markerDict[char].shift()
             } else {
                 return hex
             }
         })
+
+        for (const charMatch of Object.values(markerDict)) {
+            if (charMatch.length) { throw new Error('Pattern string and match array do not fit')}
+        }
+    }
+
+    static fromParameterGroup (parameterGroup) {
+        const patternString = '_'.repeat(parameterGroup.nHex)
+        return new Pattern(patternString, new Match(patternString, parameterGroup))
     }
 
     writePayload = function (parameterDict) {
@@ -468,23 +482,28 @@ class Pattern {
         let newPattern = new Pattern('', [])
         
         for (const pattern of patternArray) {
+            if (pattern === undefined) { continue }
             newPattern.payloadTemplate.push(...pattern.payloadTemplate)
             for (const parameterGroup of pattern.parameterGroups)
                 newPattern.parameterGroups.add(parameterGroup)
         }
-        
+
         return newPattern
     }
 }
 
 module.exports = {
-    Parameter: Parameter,
-    Range: Range,
-    List: List,
-    HexLiteral: HexLiteral,
-    IPv4: IPv4,
-    AsciiString: AsciiString,
-    ParameterGroup: ParameterGroup,
-    Pattern: Pattern,
-    Match: Match
+    Parameter,
+    Range,
+    List,
+    HexLiteral,
+    IPv4,
+    AsciiString,
+    ParameterGroup,
+    Pattern,
+    Match,
+    CallStruct,
+    Call,
+    PacketStruct,
+    Packet
 }
