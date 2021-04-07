@@ -1,4 +1,5 @@
 const utils = require('./utils')
+const { Call, Packet } = require('./requestClasses')
 
 class PendingMessage {
     static get states () {
@@ -61,11 +62,16 @@ class AbstractViscaMessage extends PendingMessage {
 
     static get expectedType() { return [0x01, 0x11] }
 
-    constructor(command, parameters) {
+    /**
+     * 
+     * @param {Call} call 
+     * @param {Object} parameterDict 
+     */
+    constructor(call, parameterDict) {
         super()
         
-        this._command = command
-        this._parameters = parameters
+        this.call = call
+        this.parameterDict = parameterDict
         
         this._stateMap = {}
         for (const [name, value] of Object.entries(PendingMessage.states)) {
@@ -83,12 +89,40 @@ class AbstractViscaMessage extends PendingMessage {
     }
 
     get payload() {
-        let markers = utils.encodeParameters(this._command.markers, this._parameters)
-        return utils.writePayload(this._command.pattern, markers)
+        return this._call.pattern.writePayload(this.parameterDict)
     }
 
     set payload(value) {
         throw Error('Cannot set payload. Change parameters instead')
+    }
+
+    identifyRecievedPayload(payload) {
+        const replies = [].concat(this.call.answers, this.call.errors)
+        for (const [reply] of replies) {
+            try {
+                const parameterDict = reply.pattern.readPayload(payload)
+                return { ...reply, parameterDict }
+            } catch (error) { }
+        }
+    }
+
+    receiveReply (payload) {
+        super.receiveReply(payload)
+        
+        const parseFunction = this.stateObject.parseFunction
+        if (parseFunction === undefined) {
+            throw Error(`Did not expect incomming message in message state '${this.stateObject.name}'`)
+        }
+
+        const identifiedReply = this.identifyRecievedPayload(payload)
+
+        if (identifiedReply === undefined) {
+            throw Error('Could not understand message')
+        }
+        
+        if (identifiedReply.type === Packet.types.ERROR) {
+            // Continue here
+        }
     }
 
     _setState (value, data) {
@@ -98,23 +132,8 @@ class AbstractViscaMessage extends PendingMessage {
         stateObject.callbacks.map(callback => callback(stateObject.data))
     }
 
-    receiveReply (payload) {
-        super.receiveReply(payload)
-        let parseFunction = this.stateObject.parseFunction
-        if (parseFunction === 'undefined') {
-            throw Error(`Did not expect incomming message in message state '${this.stateObject.name}'`)
-        }
-        let asExpected = parseFunction(payload)
-        if (!asExpected) {
-            let isErrorMessage = this.parseErrors(payload)
-            if (!isErrorMessage) {
-                throw Error('Could not understand message')
-            }
-        }
-    }
-
     parseErrors (payload) {
-        let validatorArguments = {'Address': this._parameters['Address']}
+        let validatorArguments = {'Address': this.parameterDict['Address']}
         if (typeof this.socket !== 'undefined') {
             validatorArguments['Socket'] = this.socket
         }
@@ -151,8 +170,8 @@ class AbstractViscaMessage extends PendingMessage {
 class ViscaCommand extends AbstractViscaMessage {
     static get type () { return [0x01, 0x00] }
     
-    constructor(command, parameters) {
-        super(command, parameters)
+    constructor(call, parameterDict) {
+        super(call, parameterDict)
         
         this._stateMap[PendingMessage.states.sent].parseFunction = this.parseAck.bind(this)
         this._stateMap[PendingMessage.states.ack].parseFunction = this.parseCompletion.bind(this)
@@ -166,7 +185,7 @@ class ViscaCommand extends AbstractViscaMessage {
     }
 
     parseAck (payload) {
-        let validatorArguments = {'Address': this._parameters['Address']}
+        let validatorArguments = {'Address': this.parameterDict['Address']}
         let [packetName, parameters] = utils.identifyPacket(this._command.answer, payload, validatorArguments)
         if (typeof packetName === 'undefined') {
             return false
@@ -181,7 +200,7 @@ class ViscaCommand extends AbstractViscaMessage {
     }
 
     parseCompletion (payload) {
-        let validatorArguments = {'Address': this._parameters['Address'], 'Socket': this.socket}
+        let validatorArguments = {'Address': this.parameterDict['Address'], 'Socket': this.socket}
         let [packetName, parameters] = utils.identifyPacket(this._command.answer, payload, validatorArguments)
         if (typeof packetName === 'undefined') {
             return false
@@ -220,7 +239,7 @@ class ViscaInquiry extends AbstractViscaMessage {
     }
 
     parseAnswer (payload) {
-        let validatorArguments = {'Address': this._parameters['Address']}
+        let validatorArguments = {'Address': this.parameterDict['Address']}
         
         let [packetName, parameters] = utils.identifyPacket(this._command.answer, payload, validatorArguments)
         if (typeof packetName === 'undefined') {
@@ -253,7 +272,7 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
     }
 
     parseAnswer (payload) {
-        let validatorArguments = {'Address': this._parameters['Address']}
+        let validatorArguments = {'Address': this.parameterDict['Address']}
         let [packetName, parameters] = utils.identifyPacket(this._command.answer, payload, validatorArguments)
         if (typeof packetName === 'undefined') {
             return false

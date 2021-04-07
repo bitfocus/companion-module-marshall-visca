@@ -154,7 +154,7 @@ class ViscaController {
     }
 
     pullSequenceNumber() {
-        if (typeof this._sequenceCounter === 'undefined') {
+        if (this._sequenceCounter === undefined) {
             this.resetSequenceCounter()
         }
         this._sequenceCounter += 1
