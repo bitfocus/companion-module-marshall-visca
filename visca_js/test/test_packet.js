@@ -40,7 +40,7 @@ const powerModeArray = [
     { name: 'Off (Standby)', value: 0x03 }
 ]
 
-const powerMode = ParameterGroup.fromParameterClass(List, { name: 'Power Mode', itemArray: powerModeArray })
+const powerMode = ParameterGroup.fromParameterClass(List, { name: 'Power Mode', itemArray: powerModeArray, nHex: 2 })
 const irisPosition = ParameterGroup.fromParameterClass(List, { name: 'Iris Position', itemArray: irisPositionArray })
 const resolution = ParameterGroup.fromParameterClass(List, { name: 'Resolution', itemArray: resolutionArray })
 const zoomAndFocusSpeed = ParameterGroup.fromParameterClass(Range, { name:'Speed', min: 0, max: 7, comment: '0 (Low) to 7 (High)' })
@@ -53,35 +53,6 @@ const senderAddress = ParameterGroup.fromParameter(addressParameter, {
 })
 const receiverAddress = ParameterGroup.fromParameter(addressParameter)
 const socket = ParameterGroup.fromParameterClass(Range, { name:'Socket', min: 1, max: nSockets })
-
-const compareArrays = (array1, array2) => {
-    if (array1.length !== array2.length) { return false }
-    for (const idx in array1) { if (array1[idx] !== array2[idx]) { return false }}
-    return true
-}
-const compareDicts = (dict1, dict2) => compareArrays(Object.keys(dict1), Object.keys(dict2)) && compareArrays(Object.values(dict1), Object.values(dict2))
-
-const testDecodeEncode = (parameterGroup, valueArray) => compareArrays(parameterGroup.encoder(parameterGroup.decoder(valueArray)), valueArray)
-const logDecodeEncode = (parameterGroup, valueArray) => console.log(`${parameterGroup.parameterArray[0].name} with ${valueArray}: ${testDecodeEncode(parameterGroup, valueArray)}`)
-
-const testEncodeDecode = (parameterGroup, parameterDict) => compareDicts(parameterGroup.decoder(parameterGroup.encoder(parameterDict)), parameterDict)
-const logEncodeDecode = (parameterGroup, parameterDict) => console.log(`${parameterGroup.parameterArray[0].name} with ${JSON.stringify(parameterDict)}: ${testEncodeDecode(parameterGroup, parameterDict)}`)
-
-const testCoder = (parameterGroup, parameterDict, valueArray) => {
-    logDecodeEncode(parameterGroup, valueArray)
-    logEncodeDecode(parameterGroup, parameterDict)
-    console.log(`${parameterGroup.parameterArray[0].name} match encode: ${compareArrays(parameterGroup.encoder(parameterDict), valueArray)}`)
-    console.log(`${parameterGroup.parameterArray[0].name} match decode: ${compareDicts(parameterGroup.decoder(valueArray), parameterDict)}`)
-}
-
-testCoder(irisPosition, { 'Iris Position': 'Close' }, [ 0xF ])
-testCoder(resolution, { 'Resolution': 'HD 720P(1280 x 720) - 29.97p' }, [ 0x1, 0x1 ])
-testCoder(zoomAndFocusSpeed, { 'Speed': 4 }, [ 0x4 ])
-testCoder(zoomPosition, { 'Zoom Position': 0x3400 }, [ 0x3, 0x4, 0x0, 0x0 ])
-testCoder(focusPosition, { 'Focus Position': 0x0400 }, [ 0x0, 0x4, 0x0, 0x0 ])
-testCoder(senderAddress, { 'Address': 1 }, [ 0x9 ])
-testCoder(receiverAddress, { 'Address': 3 }, [ 0x3 ])
-testCoder(socket, { 'Socket': 2 }, [ 0x2 ])
 
 const replyStruct = new PacketStruct(
     new Pattern('X0', [ new Match('X', senderAddress) ]),
@@ -106,12 +77,12 @@ const requestSet = new CallStruct(
 const command = requestSet.createChildStruct(
     new Pattern('01'),
     undefined,
+    Packet.types.COMMAND,
     [
         requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.types.ACK),
         requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.types.COMPLETION),
         requestSet.replyStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.types.ERROR) 
-    ],
-    Packet.types.COMMAND
+    ]
 )
 
 const power = command.createChild('Power', Pattern.concat(new Pattern('04 00'), Pattern.fromParameterGroup(powerMode)))
@@ -127,3 +98,5 @@ const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
 
 console.log(focus_direct.pattern.writePayload({ 'Address': 2, 'Focus Position': 234 }))
+console.log(power.pattern.writePayload({ 'Address': 2, 'Power Mode': 'On' }))
+debugger

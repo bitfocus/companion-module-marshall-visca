@@ -2,17 +2,6 @@ const Message = require('./Message')
 const utils = require('./utils')
 const async = require('async')
 
-const requestSet = {
-    packets: {
-        'command': {
-            
-        },
-        'inquery': {
-
-        }
-    }
-}
-
 class AbstractConnection {
     constructor (send, onReceive) {
         this.send = send
@@ -66,8 +55,6 @@ class ViscaController {
         this.address = address
         this._send = connection.send
         connection.onReceive(this._recive.bind(this))
-
-        this._requestSet = utils.decompressRequestSet(requestSet)
 
         this.awaitedMessages = {}
 

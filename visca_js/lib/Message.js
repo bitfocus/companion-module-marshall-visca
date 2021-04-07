@@ -89,7 +89,7 @@ class AbstractViscaMessage extends PendingMessage {
     }
 
     get payload() {
-        return this._call.pattern.writePayload(this.parameterDict)
+        return this.call.pattern.writePayload(this.parameterDict)
     }
 
     set payload(value) {
@@ -97,8 +97,7 @@ class AbstractViscaMessage extends PendingMessage {
     }
 
     identifyRecievedPayload(payload) {
-        const replies = [].concat(this.call.answers, this.call.errors)
-        for (const [reply] of replies) {
+        for (const reply of this.call.replies) {
             try {
                 const parameterDict = reply.pattern.readPayload(payload)
                 return { ...reply, parameterDict }
