@@ -419,7 +419,7 @@ class Pattern {
             }
         }
         
-        this.payloadTemplate = charArray.map((char) => {
+        this.hexPayloadTemplate = charArray.map((char) => {
             let hex = parseInt(char, 16)
             if (isNaN(hex)) {
                 if (!markerDict[char].length) { throw new Error('Pattern string and match array do not fit')}
@@ -446,7 +446,7 @@ class Pattern {
             parameterGroupsHexArray.set(parameterGroup, parameterGroup.encoder(parameterDict))
         }
 
-        let payload = this.payloadTemplate.map(element => {
+        let hexPayload = this.hexPayloadTemplate.map(element => {
             if (typeof element === 'number') {
                 return element
             } else {
@@ -454,11 +454,17 @@ class Pattern {
             }
         })
 
+        let payload = hexPayload.flatMap((halfByte, idx, hexPayload) => 
+            (idx % 2) ? [ 0x10 * hexPayload[idx-1] + hexPayload[idx] ] : []
+        )
+
         return payload
     } 
     
     readPayload = function (payload) {
-        if (payload.length !== this.payloadTemplate.length) { throw Error('Pattern has not the same length as the payload')}
+        if (payload.length * 2 !== this.hexPayloadTemplate.length) { throw Error('Pattern has not the same length as the payload')}
+
+        let hexPayload = payload.flatMap(byte => [ Math.floor(byte / 0x10), byte % 0x10 ])
 
         let parameterGroupsHexArray = new Map()
         
@@ -466,13 +472,13 @@ class Pattern {
             parameterGroupsHexArray.set(parameterGroup, [])
         }
         
-        for (const [idx, element] of this.payloadTemplate.entries()) {
+        for (const [idx, element] of this.hexPayloadTemplate.entries()) {
             if (typeof element === 'number') {
-                if (payload[idx] !== element) {
+                if (hexPayload[idx] !== element) {
                     throw Error('Payload does not match the template')
                 }
             } else {
-                parameterGroupsHexArray.get(element.parameterGroup)[element.idx] = payload[idx]
+                parameterGroupsHexArray.get(element.parameterGroup)[element.idx] = hexPayload[idx]
             }
         }
         
@@ -489,7 +495,7 @@ class Pattern {
         
         for (const pattern of patternArray) {
             if (pattern === undefined) { continue }
-            newPattern.payloadTemplate.push(...pattern.payloadTemplate)
+            newPattern.hexPayloadTemplate.push(...pattern.hexPayloadTemplate)
             for (const parameterGroup of pattern.parameterGroups)
                 newPattern.parameterGroups.add(parameterGroup)
         }

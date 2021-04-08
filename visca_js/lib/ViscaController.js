@@ -2,72 +2,12 @@ const Message = require('./Message')
 const utils = require('./utils')
 const async = require('async')
 
-const requestSet = {
-    packets: {
-        'command': {
-            
-        },
-        'inquery': {
-
-        }
-    }
-}
-
-class AbstractConnection {
-    constructor (send, onReceive) {
-        this.send = send
-        this.onReceive = onReceive
-    }
-}
-
 class ViscaController {
-    static useUdp(cam_ip, cam_port=52381, address=1, n_sockets=2) {
-        const dgram = require('dgram')
-        const server = dgram.createSocket('udp4')
-
-        server.bind()
-        server.on('listening', () => {
-            console.log(`Listining on port ${server.address().port}`)
-        })
-        // server.connect(cam_port, cam_ip) // Added in node v12.0.0
-
-        server.on('error', (err) => {
-            console.log(`Server error:\n${err.stack}`)
-            server.close()
-        })
-
-        server.on('message', (message) => {
-            console.log(`Received: ${Buffer.from(message).toString('hex').toUpperCase().match(/../g).join(' ')}`)
-        })
-
-        function send (message) {
-            console.log(`Sent: ${Buffer.from(message).toString('hex').toUpperCase().match(/../g).join(' ')}`)
-            server.send(message, cam_port, cam_ip)
-        }
-        
-        function onReceive (receiver) {
-            server.on('message', (message, remoteInfo) => {
-                 // Needed as replacement for server.connect
-                if (remoteInfo.address == cam_ip & remoteInfo.port == cam_port) {
-                    receiver(message)
-                }
-            })
-        }
-
-        let connection = new AbstractConnection(send, onReceive)
-        
-        return new this.prototype.constructor(connection, address, n_sockets)
-    }
-
-    // static _requestSet = requestSet
-
     constructor(connection, address=1, n_sockets=2) {
         this.n_sockets = n_sockets
         this.address = address
-        this._send = connection.send
-        connection.onReceive(this._recive.bind(this))
-
-        this._requestSet = utils.decompressRequestSet(requestSet)
+        this._send = connection.send.bind(connection)
+        connection.on('message', this._recive.bind(this))
 
         this.awaitedMessages = {}
 
