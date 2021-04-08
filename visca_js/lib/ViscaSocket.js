@@ -1,4 +1,3 @@
-const Message = require('./Message')
 const utils = require('./utils')
 
 class ViscaSocket {
@@ -8,24 +7,24 @@ class ViscaSocket {
         this.connection = connection
         connection.on('message', this._recive.bind(this))
 
+        this.sequenceNumber = this._sequenceNumberGenerator()
+
         this.awaitedMessages = {}
     }
 
-    sendMessage(message) {
-        let sequenceNumber = this._sendPayload(message.type, message.payload)
+    async sendMessage(message) {
+        let sequenceNumber = await this.sequenceNumber.next().value
+        await this._send(message.type, sequenceNumber, message.payload)
         this.awaitedMessages[sequenceNumber] = message
     }
 
-    _sendPayload(type, payload) {
+    async _send(type, sequenceNumber, payload) {
         let typeBuffer = Buffer.from(type)
-        let sequenceNumber = this.pullSequenceNumber()
         let payloadLength = utils.uintToByteArray(payload.length, 2)
         let byteSequenceNumber = utils.uintToByteArray(sequenceNumber, 4)
         let payloadBuffer = Buffer.from(payload)
         let data = Buffer.concat([typeBuffer, payloadLength, byteSequenceNumber, payloadBuffer])
         this.connection.send(data)
-
-       return sequenceNumber
     }
 
     _recive(data) {
@@ -45,8 +44,13 @@ class ViscaSocket {
         } catch (error) {
             throw SyntaxError('Visca Syntax Error')
         }
-        if (Buffer.from(message.expectedType).compare(type) != 0) {
-            throw SyntaxError('Visca Syntax Error: Unexpected payload type');
+        
+        try {
+            if (Buffer.from(message.expectedType).compare(type) != 0) {
+                throw SyntaxError('Visca Syntax Error: Unexpected payload type');
+            }
+        } catch (error) {
+            return
         }
 
         try {
@@ -59,22 +63,21 @@ class ViscaSocket {
         message.receiveReply([...payload]) // Convert Uint8Array to number array
     }
 
-    pullSequenceNumber() {
-        if (this._sequenceCounter === undefined) {
-            this.resetSequenceCounter()
+    async *_sequenceNumberGenerator() {
+        while (true) {
+            await this.resetSequenceCounter()
+            let sequenceNumber = 1
+            while (sequenceNumber < 0xFF_FF_FF_FF) {
+                yield sequenceNumber++
+            }
         }
-        this._sequenceCounter += 1
-        if (this.sequenceCounter > 0xFFFFFFFF) {
-            this.resetSequenceCounter()
-        }
-        return this._sequenceCounter
     }
 
-    resetSequenceCounter() {
-        let reset_cmd = Buffer.from([0x01])
-        this._sequenceCounter = -1
-        let message = new Message.ControlCommand(reset_cmd)
-        this.sendMessage(message)
+    async resetSequenceCounter() {
+        let type = [0x02, 0x00]
+        let sequenceNumber = 0
+        let payload = [0x01] 
+        await this._send(type, sequenceNumber, payload)
     }
 }
 
