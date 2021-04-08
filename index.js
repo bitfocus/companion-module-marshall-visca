@@ -1,15 +1,10 @@
 var instance_skel = require('../../instance_skel');
-console.log('test')
 var MarshallController = require('./visca_js/index');
-var debug;
-var log;
 
 class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config)
-		debug = this.debug
-		log = this.log
-
+		
 		this.controller = new MarshallController('192.168.102.33')
 		this.initActions()
 	}
@@ -53,6 +48,7 @@ class instance extends instance_skel {
 					id: 'text',
 				},
 			],
+			// eslint-disable-next-line no-unused-vars
 			callback: (action, bank) => {
 				this.controller.sendViscaCommand(['CAM_Power'], { 'Address': 1, 'Power Mode': 'On' })
 			},
@@ -67,6 +63,7 @@ class instance extends instance_skel {
 					id: 'text',
 				},
 			],
+			// eslint-disable-next-line no-unused-vars
 			callback: (action, bank) => {
 				this.controller.sendViscaCommand(['CAM_Power'], { 'Address': 1, 'Power Mode': 'Off (Standby)' })
 			},
@@ -76,7 +73,7 @@ class instance extends instance_skel {
 
 		return
 
-		const addPacket = function (packet) {
+		/* const addPacket = function (packet) {
 			let options = []
 			if (packet.hasOwnProperty('markers')) {
 				for (const marker of Object.values(packet.markers)) {
@@ -129,7 +126,7 @@ class instance extends instance_skel {
 
 		loopPackets(this.controller._requestSet.packets.command.packets)
 
-		this.setActions(actions)
+		this.setActions(actions) */
 	}
 }
 

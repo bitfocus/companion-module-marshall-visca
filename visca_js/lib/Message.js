@@ -1,5 +1,5 @@
 const utils = require('./utils')
-const { Call, Packet } = require('./requestClasses')
+const {  Packet } = require('./requestClasses')
 
 class PendingMessage {
     static get states () {
@@ -17,9 +17,11 @@ class PendingMessage {
 
     constructor(payload=[]) {
         this._payload = payload;
-        this._state = PendingMessage.states.pending;
+        // this._state = PendingMessage.states.pending;
+        this._state = PendingMessage.states.sent;
     }
 
+    // eslint-disable-next-line no-unused-vars
     startSending (releaseSocket) {
         this._state = PendingMessage.states.sending
     }

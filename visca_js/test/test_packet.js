@@ -1,9 +1,8 @@
-const { CallStruct, Call, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('../lib/requestClasses')
-const utils = require('../lib/utils')
+const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('../lib/requestClasses')
 
 const nSockets = 2
 
-const irisPositionArray = [
+/* const irisPositionArray = [
     { name: 'Close', value: 0x0F },
     { name: 'F1.6',  value: 0x0E },
     { name: 'F2',    value: 0x0D },
@@ -20,9 +19,9 @@ const irisPositionArray = [
     { name: 'F13',   value: 0x02 },
     { name: 'F16',   value: 0x01 },
     { name: 'F18',   value: 0x00 }   
-]
+] */
 
-const resolutionArray = [
+/* const resolutionArray = [
     { name: 'QFHD 4K(3840 x 2160) - 29.97p',   value: 0x05 },
     { name: 'QFHD 4K(3840 x 2160) - 25p',      value: 0x06 },
     { name: 'FHD 1080P(1920 x 1080) - 59.94p', value: 0x08 },
@@ -33,7 +32,7 @@ const resolutionArray = [
     { name: 'HD 720P(1280 x 720) - 50p',       value: 0x0F },
     { name: 'HD 720P(1280 x 720) - 29.97p',    value: 0x11 },
     { name: 'HD 720P(1280 x 720) - 25p',       value: 0x12 }
-]
+] */
 
 const powerModeArray = [
     { name: 'On',            value: 0x02 },
@@ -41,10 +40,10 @@ const powerModeArray = [
 ]
 
 const powerMode = ParameterGroup.fromParameterClass(List, { name: 'Power Mode', itemArray: powerModeArray, nHex: 2 })
-const irisPosition = ParameterGroup.fromParameterClass(List, { name: 'Iris Position', itemArray: irisPositionArray })
-const resolution = ParameterGroup.fromParameterClass(List, { name: 'Resolution', itemArray: resolutionArray })
-const zoomAndFocusSpeed = ParameterGroup.fromParameterClass(Range, { name:'Speed', min: 0, max: 7, comment: '0 (Low) to 7 (High)' })
-const zoomPosition = ParameterGroup.fromParameterClass(Range, { name:'Zoom Position', min: 0x0000, max: 0x4000, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)` })
+// const irisPosition = ParameterGroup.fromParameterClass(List, { name: 'Iris Position', itemArray: irisPositionArray })
+// const resolution = ParameterGroup.fromParameterClass(List, { name: 'Resolution', itemArray: resolutionArray })
+// const zoomAndFocusSpeed = ParameterGroup.fromParameterClass(Range, { name:'Speed', min: 0, max: 7, comment: '0 (Low) to 7 (High)' })
+// const zoomPosition = ParameterGroup.fromParameterClass(Range, { name:'Zoom Position', min: 0x0000, max: 0x4000, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)` })
 const focusPosition = ParameterGroup.fromParameterClass(Range, { name:'Focus Position', min: 0x0000, max: 0x047A, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)`, nHex: 4 })
 const addressParameter = new Range('Address', 1, 7)
 const senderAddress = ParameterGroup.fromParameter(addressParameter, { 
@@ -88,15 +87,14 @@ const command = requestSet.createChildStruct(
 const power = command.createChild('Power', Pattern.concat(new Pattern('04 00'), Pattern.fromParameterGroup(powerMode)))
 
 const focus = command.createChildStruct(new Pattern('04'))
-const focus_stop = focus.createChild('Stop', new Pattern('08 00'), 'Enabled during Manual Focus Mode')
-const focus_farStandard = focus.createChild('Far (Standard)', new Pattern('08 02'), 'Enabled during Manual Focus Mode')
-const focus_nearStandard = focus.createChild('Near (Standard)', new Pattern('08 03'), 'Enabled during Manual Focus Mode')
-const focus_farStep = focus.createChild('Far Step', new Pattern('08 04'), 'Enabled during Manual Focus Mode')
-const focus_nearStep = focus.createChild('Near Step', new Pattern('08 05'), 'Enabled during Manual Focus Mode')
-const focus_farVariable = focus.createChild('Far (Variable)', new Pattern('08 2p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
-const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 3p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
+// const focus_stop = focus.createChild('Stop', new Pattern('08 00'), 'Enabled during Manual Focus Mode')
+// const focus_farStandard = focus.createChild('Far (Standard)', new Pattern('08 02'), 'Enabled during Manual Focus Mode')
+// const focus_nearStandard = focus.createChild('Near (Standard)', new Pattern('08 03'), 'Enabled during Manual Focus Mode')
+// const focus_farStep = focus.createChild('Far Step', new Pattern('08 04'), 'Enabled during Manual Focus Mode')
+// const focus_nearStep = focus.createChild('Near Step', new Pattern('08 05'), 'Enabled during Manual Focus Mode')
+// const focus_farVariable = focus.createChild('Far (Variable)', new Pattern('08 2p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
+// const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 3p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
 
 console.log(focus_direct.pattern.writePayload({ 'Address': 2, 'Focus Position': 234 }))
 console.log(power.pattern.writePayload({ 'Address': 2, 'Power Mode': 'On' }))
-debugger
