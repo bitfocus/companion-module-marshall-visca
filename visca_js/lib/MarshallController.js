@@ -1,4 +1,5 @@
 const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('../lib/requestClasses')
+const { Udp } = require('./Connection')
 const ViscaController = require('./ViscaController')
 
 const nSockets = 2
@@ -98,7 +99,9 @@ const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
 class MarshallController extends ViscaController {
 
-    constructor(connection, address=1) {
+    constructor(ip, address=1) {
+        let connection = new Udp(ip)
+
         super(connection, address, nSockets)
 
         this._requestSet = {
