@@ -10,7 +10,7 @@ class instance extends instance_skel {
 		debug = this.debug
 		log = this.log
 
-		this.controller = MarshallController.useUdp('192.168.102.33')
+		this.controller = new MarshallController('192.168.102.33')
 		this.initActions()
 	}
 
@@ -43,6 +43,38 @@ class instance extends instance_skel {
 
 	initActions () {
 		let actions = {}
+
+		actions['On'] = {
+			label: 'On',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Some Text',
+					id: 'text',
+				},
+			],
+			callback: (action, bank) => {
+				this.controller.sendViscaCommand(['CAM_Power'], { 'Address': 1, 'Power Mode': 'On' })
+			},
+		}
+
+		actions['Off'] = {
+			label: 'Off',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Some Text',
+					id: 'text',
+				},
+			],
+			callback: (action, bank) => {
+				this.controller.sendViscaCommand(['CAM_Power'], { 'Address': 1, 'Power Mode': 'Off (Standby)' })
+			},
+		}
+
+		this.setActions(actions)
+
+		return
 
 		const addPacket = function (packet) {
 			let options = []
