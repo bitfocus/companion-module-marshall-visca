@@ -1,40 +1,9 @@
-const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('../lib/requestClasses')
+const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./requestClasses')
 const { Udp } = require('./Connection')
-const ViscaController = require('./ViscaController')
+const ViscaSocket = require('./ViscaSocket')
+const ViscaCamera = require('./ViscaCamera')
 
 const nSockets = 2
-
-const irisPositionArray = [
-    { name: 'Close', value: 0x0F },
-    { name: 'F1.6',  value: 0x0E },
-    { name: 'F2',    value: 0x0D },
-    { name: 'F2.2',  value: 0x0C },
-    { name: 'F2.7',  value: 0x0B },
-    { name: 'F3.2',  value: 0x0A },
-    { name: 'F3.8',  value: 0x09 },
-    { name: 'F4.5',  value: 0x08 },
-    { name: 'F5.4',  value: 0x07 },
-    { name: 'F6.3',  value: 0x06 },
-    { name: 'F7.8',  value: 0x05 },
-    { name: 'F9',    value: 0x04 },
-    { name: 'F11',   value: 0x03 },
-    { name: 'F13',   value: 0x02 },
-    { name: 'F16',   value: 0x01 },
-    { name: 'F18',   value: 0x00 }   
-]
-
-const resolutionArray = [
-    { name: 'QFHD 4K(3840 x 2160) - 29.97p',   value: 0x05 },
-    { name: 'QFHD 4K(3840 x 2160) - 25p',      value: 0x06 },
-    { name: 'FHD 1080P(1920 x 1080) - 59.94p', value: 0x08 },
-    { name: 'FHD 1080P(1920 x 1080) - 50p',    value: 0x09 },
-    { name: 'FHD 1080P(1920 x 1080) - 29.97p', value: 0x0B },
-    { name: 'FHD 1080P(1920 x 1080) - 25p',    value: 0x0C },
-    { name: 'HD 720P(1280 x 720) - 59.94p',    value: 0x0E },
-    { name: 'HD 720P(1280 x 720) - 50p',       value: 0x0F },
-    { name: 'HD 720P(1280 x 720) - 29.97p',    value: 0x11 },
-    { name: 'HD 720P(1280 x 720) - 25p',       value: 0x12 }
-]
 
 const powerModeArray = [
     { name: 'On',            value: 0x02 },
@@ -42,10 +11,7 @@ const powerModeArray = [
 ]
 
 const powerMode = ParameterGroup.fromParameterClass(List, { name: 'Power Mode', itemArray: powerModeArray, nHex: 2 })
-const irisPosition = ParameterGroup.fromParameterClass(List, { name: 'Iris Position', itemArray: irisPositionArray })
-const resolution = ParameterGroup.fromParameterClass(List, { name: 'Resolution', itemArray: resolutionArray })
 const zoomAndFocusSpeed = ParameterGroup.fromParameterClass(Range, { name:'Speed', min: 0, max: 7, comment: '0 (Low) to 7 (High)' })
-const zoomPosition = ParameterGroup.fromParameterClass(Range, { name:'Zoom Position', min: 0x0000, max: 0x4000, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)` })
 const focusPosition = ParameterGroup.fromParameterClass(Range, { name:'Focus Position', min: 0x0000, max: 0x047A, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)`, nHex: 4 })
 const addressParameter = new Range('Address', 1, 7)
 const senderAddress = ParameterGroup.fromParameter(addressParameter, { 
@@ -97,12 +63,14 @@ const focus_nearStep = focus.createChild('Near Step', new Pattern('08 05'), 'Ena
 const focus_farVariable = focus.createChild('Far (Variable)', new Pattern('08 2p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 3p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
-class MarshallController extends ViscaController {
+
+class MarshallCamera extends ViscaCamera {
 
     constructor(ip, address=1) {
         let connection = new Udp(ip)
+        let viscaSocket = new ViscaSocket(connection, address, nSockets)
 
-        super(connection, address, nSockets)
+        super(viscaSocket)
 
         this._requestSet = {
             packets: {
@@ -128,4 +96,4 @@ class MarshallController extends ViscaController {
     }
 }
 
-module.exports = MarshallController
+module.exports = MarshallCamera
