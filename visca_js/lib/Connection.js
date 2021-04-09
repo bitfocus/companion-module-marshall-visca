@@ -2,21 +2,21 @@ const EventEmitter = require('events')
 const dgram = require('dgram')
 
 class AbstractConnection extends EventEmitter {
-    send(message) {
-        this._logMessage('Sending', message)
+    send(dataArray) {
+        this._logMessage('Sending', dataArray)
     }
 
     close() {
         this.emit('close')
     }
 
-    _receive(message) {
-        this._logMessage('Received', message)
-        this.emit('message', message)
+    _receive(dataArray) {
+        this._logMessage('Received', dataArray)
+        this.emit('message', dataArray)
     }
 
-    _logMessage(topic, message) {
-        console.debug(topic, Buffer.from(message).toString('hex').toUpperCase().match(/../g).join(' '))
+    _logMessage(topic, dataArray) {
+        console.debug(topic, Buffer.from(dataArray).toString('hex').toUpperCase().match(/../g).join(' '))
     }
 }
 
@@ -35,9 +35,15 @@ class Udp extends AbstractConnection {
         this._socket.on('message', this._receive.bind(this))
     }
 
-    send(message) {
-        super.send(message)
-        this._socket.send(message)
+    send(dataArray) {
+        const dataBuffer = Buffer.from(dataArray)
+        super.send(dataBuffer)
+        this._socket.send(dataBuffer)
+    }
+
+    _receive(dataBuffer) {
+        const dataArray = [ ...dataBuffer ]
+        super._receive(dataArray)
     }
 
     close() {

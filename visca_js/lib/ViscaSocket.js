@@ -29,12 +29,15 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
     }
 
     async _send(type, sequenceNumber, payload) {
-        let typeBuffer = Buffer.from(type)
         let payloadLength = utils.uintToByteArray(payload.length, 2)
         let byteSequenceNumber = utils.uintToByteArray(sequenceNumber, 4)
-        let payloadBuffer = Buffer.from(payload)
-        let data = Buffer.concat([typeBuffer, payloadLength, byteSequenceNumber, payloadBuffer])
-        this.connection.send(data)
+        let dataArray = [
+            ...type,
+            ...payloadLength,
+            ...byteSequenceNumber,
+            ...payload
+        ]
+        this.connection.send(dataArray)
 
         if (this.receiveHandlers.has(sequenceNumber)) {
             const awaitedMessage = this.receiveHandlers.get(sequenceNumber)
@@ -101,7 +104,7 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
             throw SyntaxError('Visca Syntax Error: Reading payload')
         }
         
-        receiveHandler.resolve([ ...payload ]) // Convert Uint8Array to number array
+        receiveHandler.resolve(payload) // Convert Uint8Array to number array
     }
 
     async *_sequenceNumberGenerator() {
