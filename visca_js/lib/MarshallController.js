@@ -1,6 +1,6 @@
 const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./requestClasses')
 const { Udp } = require('./Connection')
-const ViscaSocket = require('./ViscaSocket')
+const ViscaOverIpSocket = require('./ViscaSocket')
 const ViscaCamera = require('./ViscaCamera')
 
 const nSockets = 2
@@ -68,7 +68,7 @@ class MarshallCamera extends ViscaCamera {
 
     constructor(ip, address=1) {
         let connection = new Udp(ip)
-        let viscaSocket = new ViscaSocket(connection, address, nSockets)
+        let viscaSocket = new ViscaOverIpSocket(connection, address, nSockets)
 
         super(viscaSocket)
 
