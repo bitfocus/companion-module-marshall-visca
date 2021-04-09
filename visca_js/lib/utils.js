@@ -268,20 +268,6 @@ exports.checkParameter = function (parameter, value) {
     }
 }
 
-exports.encodeParameters = function (markersSets, parameters) {
-    let markersDict = {}
-    for (let [markers, markersObject] of Object.entries(markersSets)) {
-        for (let parameterName in markersObject.parameters) {
-            exports.checkParameter(markersObject.parameters[parameterName], parameters[parameterName])
-        }
-        let markerValues = markersObject.encoder(parameters)
-        for (let ind in markers) {
-            markersDict[markers[ind]] = markerValues[ind]
-        }
-    }
-    return markersDict
-}
-
 exports.decodeMarkers = function (markersSets, markersDict, validatorArguments={}) {
     let parameters = {}
     for (let [markers, markersObject] of Object.entries(markersSets)) {
@@ -303,47 +289,4 @@ exports.decodeMarkers = function (markersSets, markersDict, validatorArguments={
         parameters = {...parameters, ...currentParameters}
     }
     return parameters
-}
-
-exports.decompressRequestSet = function (packet, parentPacket={}, packetName='root') {
-    concatSpaced = strings => strings.filter(Boolean).join(' ')
-
-    let packetCopy
-    if (typeof packet !== 'object') {
-        packetCopy = { core: String(packet) }
-    } else {
-        packetCopy = Object.assign({}, packet)
-    }
-    packetCopy.name = (parentPacket.name || []).concat(packetName)
-
-    for (const reply_type of ['answer', 'error']) {
-        if (!packet.hasOwnProperty(reply_type) && !parentPacket.hasOwnProperty(reply_type)) {
-            continue // This is also the case if a answer or error packet gets decompressed
-        }
-
-        let childReplyPacket = packet[reply_type] || {}
-        let parentReplyPacket = parentPacket[reply_type] || {}
-        packetCopy[reply_type] = exports.decompressRequestSet(childReplyPacket, parentReplyPacket, packetName)
-        packetCopy[reply_type].packets = Object.assign({}, parentReplyPacket.packets, childReplyPacket.packets)
-    }
-    
-    // Property 'pattern' is used if 'core' and 'pattern' are given
-    if (packetCopy.hasOwnProperty('pattern')) {
-        packetCopy.pattern = packet.pattern
-        packetCopy.markers = Object.assign({}, packet.markers)
-    } else {
-        packetCopy.rootPrefix = packetCopy.rootPrefix || concatSpaced([parentPacket.rootPrefix, packet.prefix])
-        packetCopy.rootPostfix = packetCopy.rootPostfix || concatSpaced([parentPacket.rootPostfix, packet.postfix])
-        packetCopy.markers = Object.assign({}, parentPacket.markers, packet.markers)
-        if (packetCopy.hasOwnProperty('core')) {
-            packetCopy.pattern = concatSpaced([packetCopy.rootPrefix, packetCopy.core, packetCopy.rootPostfix])
-        } else if (packet.hasOwnProperty('packets')) {
-            // Recursive algorithm
-            for (let [name, childPacket] of Object.entries(packet.packets)) {
-                packetCopy.packets[name] = exports.decompressRequestSet(childPacket, packetCopy, name)
-            }
-        }
-    } 
-
-    return packetCopy
 }
