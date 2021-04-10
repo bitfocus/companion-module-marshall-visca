@@ -1,4 +1,5 @@
 const EventEmitter = require('events')
+const { Packet } = require('./requestClasses')
 const utils = require('./utils')
 
 class OpenViscaSocket extends EventEmitter {
@@ -26,6 +27,34 @@ class AbstractViscaSocket {
     }
 }
 
+const PayloadTypes = Object.freeze({
+    VISCA_COMMAND: Symbol('VISCA command'),
+    VISCA_INQUERY: Symbol('VISCA inquery'),
+    VISCA_REPLY: Symbol('VISCA reply'),
+    VISCA_DEVICE_SETTING_COMMAND: Symbol('VISCA device setting command'),
+    CONTROL_COMMAND: Symbol('Control command'),
+    CONTROL_REPLY: Symbol('Control reply')
+})
+
+const PayloadTypeBytes = Object.freeze({
+    [PayloadTypes.VISCA_COMMAND]: [0x01, 0x00],
+    [PayloadTypes.VISCA_INQUERY]: [0x01, 0x10],
+    [PayloadTypes.VISCA_REPLY]: [0x01, 0x11],
+    [PayloadTypes.VISCA_DEVICE_SETTING_COMMAND]: [0x01, 0x20],
+    [PayloadTypes.CONTROL_COMMAND]: [0x02, 0x00],
+    [PayloadTypes.CONTROL_REPLY]: [0x02, 0x01]
+})
+
+const ViscaPacketPayloadTypeMapping = Object.freeze({
+    [Packet.TYPES.ERROR]: PayloadTypes.VISCA_REPLY,
+    [Packet.TYPES.ACK]: PayloadTypes.VISCA_REPLY,
+    [Packet.TYPES.COMPLETION]: PayloadTypes.VISCA_REPLY,
+    [Packet.TYPES.ANSWER]: PayloadTypes.VISCA_REPLY,
+    [Packet.TYPES.COMMAND]: PayloadTypes.VISCA_COMMAND,
+    [Packet.TYPES.INQUERY]: PayloadTypes.VISCA_INQUERY,
+    [Packet.TYPES.DEVICE_SETTING_COMMAND]: PayloadTypes.VISCA_DEVICE_SETTING_COMMAND
+})
+
 class ViscaOverIpSocket extends AbstractViscaSocket {
     constructor(connection, address=1, nSockets=2) {
         super()
@@ -41,7 +70,9 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 
     async sendMessage(message) {
         const sequenceNumber = (await this.sequenceNumber.next()).value
-        const openViscaSocket = await this._send(message.type, sequenceNumber, message.getFinalPayload())
+        const payloadType = ViscaPacketPayloadTypeMapping[message.call.type]
+        const payloadTypeBytes = PayloadTypeBytes[payloadType]
+        const openViscaSocket = await this._send(payloadTypeBytes, sequenceNumber, message.getFinalPayload())
         return openViscaSocket
     }
 

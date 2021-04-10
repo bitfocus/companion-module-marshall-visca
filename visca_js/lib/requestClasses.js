@@ -356,14 +356,15 @@ class CallStruct extends PacketStruct {
 }
 
 const PacketTypes = Object.freeze({
-    ERROR: 'Error',
-    ACK: 'Ack',
-    COMPLETION: 'Completion',
-    ANSWER: 'Answer',
-    COMMAND: 'Command',
-    INQUERY: 'Inquery',
-    DEVICE_SETTING_COMMAND: 'Device Setting Command'
+    ERROR: Symbol('Error'),
+    ACK: Symbol('Ack'),
+    COMPLETION: Symbol('Completion'),
+    ANSWER: Symbol('Answer'),
+    COMMAND: Symbol('Command'),
+    INQUERY: Symbol('Inquery'),
+    DEVICE_SETTING_COMMAND: Symbol('Device Setting Command')
 })
+
 class Packet {
     static get TYPES() {
         return PacketTypes

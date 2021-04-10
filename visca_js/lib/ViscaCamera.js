@@ -1,4 +1,4 @@
-const Message = require('./Message')
+const Message = require('./Request')
 const async = require('async')
 
 class ViscaCamera {
@@ -20,7 +20,12 @@ class ViscaCamera {
     }
 
     _sendMessage(message) {
-        this.viscaSocket.sendMessage(message)
+        this.viscaSocket.sendMessage(message).then((openViscaSocket) => {
+            message.confirmSent()
+            openViscaSocket.on('message', (payload) => {
+                message.receiveReply(payload)
+            })
+        })
     }
 
     sendViscaCommand(commandName, parameters={}) {

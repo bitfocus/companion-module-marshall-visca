@@ -10,9 +10,15 @@ const powerModeArray = [
     { name: 'Off (Standby)', value: 0x03 }
 ]
 
+const focusModeArray = [
+    { name: 'Auto Focus',   value: 0x02 },
+    { name: 'Manual Focus', value: 0x03 }
+]
+
 const powerMode = ParameterGroup.fromParameterClass(List, { name: 'Power Mode', itemArray: powerModeArray, nHex: 2 })
 const zoomAndFocusSpeed = ParameterGroup.fromParameterClass(Range, { name:'Speed', min: 0, max: 7, comment: '0 (Low) to 7 (High)' })
 const focusPosition = ParameterGroup.fromParameterClass(Range, { name:'Focus Position', min: 0x0000, max: 0x047A, comment: `${0x0000} (Wide end) to ${0x4000} (Tele end)`, nHex: 4 })
+const focusMode = ParameterGroup.fromParameterClass(List, { name: 'Focus Mode', itemArray: focusModeArray, nHex: 2 })
 const addressParameter = new Range('Address', 1, 7)
 const senderAddress = ParameterGroup.fromParameter(addressParameter, { 
     encoder: parameterDict => [ parameterDict['Address'] + 8 ],
@@ -63,6 +69,7 @@ const focus_nearStep = focus.createChild('Near Step', new Pattern('08 05'), 'Ena
 const focus_farVariable = focus.createChild('Far (Variable)', new Pattern('08 2p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 3p', new Match('p', zoomAndFocusSpeed)), 'Enabled during Manual Focus Mode')
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
+const focus_mode = focus.createChild('Focus Mode', Pattern.concat(new Pattern('38'), Pattern.fromParameterGroup(focusMode)))
 
 class MarshallCamera extends ViscaCamera {
 
@@ -86,7 +93,8 @@ class MarshallCamera extends ViscaCamera {
                                 'Near Step': focus_nearStep,
                                 'Far (Variable)': focus_farVariable,
                                 'Near (Variable)': focus_nearVariable,
-                                'Direct': focus_direct
+                                'Direct': focus_direct,
+                                'Mode': focus_mode
                             }
                         }
                     }
