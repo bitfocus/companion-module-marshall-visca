@@ -1,3 +1,4 @@
+/* eslint-disable no-empty-pattern */
 const utils = require('./utils')
 
 class Parameter {
@@ -212,6 +213,7 @@ class AsciiString extends Parameter {
     }
 
     validate(value) {
+        // eslint-disable-next-line no-control-regex
         return value.length === this.nCharacters && /^[\x00-\x7F]*$/.test(value)
     }
     
@@ -354,15 +356,17 @@ class CallStruct extends PacketStruct {
 }
 
 class Packet {
-    static types = Object.freeze({
-        ERROR: 'Error',
-        ACK: 'Ack',
-        COMPLETION: 'Completion',
-        ANSWER: 'Answer',
-        COMMAND: 'Command',
-        INQUERY: 'Inquery',
-        DEVICE_SETTING_COMMAND: 'Device Setting Command'
-    })
+    static get TYPES() {
+        return Object.freeze({
+            ERROR: 'Error',
+            ACK: 'Ack',
+            COMPLETION: 'Completion',
+            ANSWER: 'Answer',
+            COMMAND: 'Command',
+            INQUERY: 'Inquery',
+            DEVICE_SETTING_COMMAND: 'Device Setting Command'
+        })
+    }
 
     constructor(name, type, pattern, comment) {
         this.name = name
@@ -409,7 +413,7 @@ class Pattern {
             this.parameterGroups.add(match.parameterGroup)
 
             for (const [idx, marker] of match.markers.entries()) {
-                if (!markerDict.hasOwnProperty(marker)) {
+                if (!(marker in markerDict)) {
                     markerDict[marker] = []
                 }
                 markerDict[marker].push({
@@ -434,12 +438,12 @@ class Pattern {
         }
     }
 
-    static fromParameterGroup (parameterGroup) {
+    static fromParameterGroup(parameterGroup) {
         const patternString = '_'.repeat(parameterGroup.nHex)
         return new Pattern(patternString, new Match(patternString, parameterGroup))
     }
 
-    writePayload = function (parameterDict) {
+    writePayload(parameterDict) {
         let parameterGroupsHexArray = new Map()
 
         for (const parameterGroup of this.parameterGroups) {
@@ -461,7 +465,7 @@ class Pattern {
         return payload
     } 
     
-    readPayload = function (payload) {
+    readPayload(payload) {
         if (payload.length * 2 !== this.hexPayloadTemplate.length) { throw Error('Pattern has not the same length as the payload')}
 
         let hexPayload = payload.flatMap(byte => [ Math.floor(byte / 0x10), byte % 0x10 ])
@@ -490,7 +494,7 @@ class Pattern {
         return parameterDict
     }
 
-    static concat (...patternArray) { // should handle 'undefined' and n>=0 arguments
+    static concat(...patternArray) { // should handle 'undefined' and n>=0 arguments
         let newPattern = new Pattern('', [])
         
         for (const pattern of patternArray) {

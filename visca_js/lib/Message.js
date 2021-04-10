@@ -1,16 +1,16 @@
 const utils = require('./utils')
-const {  Packet } = require('./requestClasses')
+const { Packet } = require('./requestClasses')
 
-class PendingMessage {
-    static get states () {
-        return {
-            pending: 0,
-            sending: 1,
-            sent: 2,
-            ack: 3,
-            completed: 4,
-            error: -1
-        }
+class Request {
+    static get STATES () {
+        return Object.freeze({
+            PENDING: 0,
+            SENDING: 1,
+            SENT: 2,
+            ACK: 3,
+            COMPLETED: 4,
+            ERROR: -1
+        })
     }
     static get type() { return undefined } // Abstract
     static get expectedType() { return undefined } // Abstract
@@ -18,16 +18,16 @@ class PendingMessage {
     constructor(payload=[]) {
         this._payload = payload;
         // this._state = PendingMessage.states.pending;
-        this._state = PendingMessage.states.sent;
+        this._state = Request.STATES.SENT;
     }
 
     // eslint-disable-next-line no-unused-vars
     startSending (releaseSocket) {
-        this._state = PendingMessage.states.sending
+        this._state = Request.STATES.SENDING
     }
 
     wasSent () {
-        this._state = PendingMessage.states.sent;
+        this._state = Request.STATES.SENT;
     }
 
     get state() {
@@ -47,7 +47,7 @@ class PendingMessage {
     }
 
     set payload(value) {
-        if (this.state !== PendingMessage.states.pending) {
+        if (this.state !== Request.STATES.PENDING) {
             throw Error('Message already sent')
         }
         this._payload = value
@@ -59,7 +59,7 @@ class PendingMessage {
     }
 }
 
-class AbstractViscaMessage extends PendingMessage {
+class AbstractViscaMessage extends Request {
     // TODO Merge with PendingMessage?
 
     static get expectedType() { return [0x01, 0x11] }
@@ -76,7 +76,7 @@ class AbstractViscaMessage extends PendingMessage {
         this.parameterDict = parameterDict
         
         this._stateMap = {}
-        for (const [name, value] of Object.entries(PendingMessage.states)) {
+        for (const [name, value] of Object.entries(Request.STATES)) {
             this._stateMap[value] = {
                 name: name,
                 callbacks: [],
@@ -121,7 +121,7 @@ class AbstractViscaMessage extends PendingMessage {
             throw Error('Could not understand message')
         }
         
-        if (identifiedReply.type === Packet.types.ERROR) {
+        if (identifiedReply.type === Packet.TYPES.ERROR) {
             // Continue here
         }
     }
@@ -150,7 +150,7 @@ class AbstractViscaMessage extends PendingMessage {
         if (parameters) {
             errorMessage += ` with parameters ${JSON.stringify(parameters)}`
         }
-        this._setState(PendingMessage.states.error, errorMessage)
+        this._setState(Request.STATES.error, errorMessage)
         return true
     } 
 
@@ -162,7 +162,7 @@ class AbstractViscaMessage extends PendingMessage {
                 resolve(this.stateObject.data)
             } else {
                 this._stateMap[state].callbacks.push(resolve)
-                this._stateMap[PendingMessage.states.error].callbacks.push(reject)
+                this._stateMap[Request.STATES.error].callbacks.push(reject)
             }
         })
     }
@@ -174,14 +174,14 @@ class ViscaCommand extends AbstractViscaMessage {
     constructor(call, parameterDict) {
         super(call, parameterDict)
         
-        this._stateMap[PendingMessage.states.sent].parseFunction = this.parseAck.bind(this)
-        this._stateMap[PendingMessage.states.ack].parseFunction = this.parseCompletion.bind(this)
+        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAck.bind(this)
+        this._stateMap[Request.STATES.ACK].parseFunction = this.parseCompletion.bind(this)
     }
 
     startSending (releaseSocket) {
         let saveReleaseSocket = () => { try { releaseSocket() } catch (_) { }}
-        this._stateMap[PendingMessage.states.completed].callbacks.push(saveReleaseSocket)
-        this._stateMap[PendingMessage.states.error].callbacks.push(saveReleaseSocket)
+        this._stateMap[Request.STATES.COMPLETED].callbacks.push(saveReleaseSocket)
+        this._stateMap[Request.STATES.error].callbacks.push(saveReleaseSocket)
         super.startSending(releaseSocket)
     }
 
@@ -196,7 +196,7 @@ class ViscaCommand extends AbstractViscaMessage {
         }
         
         this.socket = parameters['Socket']
-        this._setState(PendingMessage.states.ack)
+        this._setState(Request.STATES.ACK)
         return true
     }
 
@@ -210,16 +210,16 @@ class ViscaCommand extends AbstractViscaMessage {
             throw Error(`Expected completion message but received '${packetName}' with parameters ${JSON.stringify(parameters)}`)
         }
         
-        this._setState(PendingMessage.states.completed)
+        this._setState(Request.STATES.COMPLETED)
         return true
    }
 
     get ack () {
-        return this.promiseState(PendingMessage.states.ack)
+        return this.promiseState(Request.STATES.ACK)
     }
 
     get completion () {
-        return this.promiseState(PendingMessage.states.completed)
+        return this.promiseState(Request.STATES.COMPLETED)
     }
 }
 
@@ -229,13 +229,13 @@ class ViscaInquiry extends AbstractViscaMessage {
     constructor(command, parameters) {
         super(command, parameters)
 
-        this._stateMap[PendingMessage.states.sent].parseFunction = this.parseAnswer.bind(this)
+        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAnswer.bind(this)
     }
 
     startSending (releaseSocket) {
         let saveReleaseSocket = () => { try { releaseSocket() } catch (_) { }}
-        this._stateMap[PendingMessage.states.completed].callbacks.push(saveReleaseSocket)
-        this._stateMap[PendingMessage.states.error].callbacks.push(saveReleaseSocket)
+        this._stateMap[Request.STATES.COMPLETED].callbacks.push(saveReleaseSocket)
+        this._stateMap[Request.STATES.error].callbacks.push(saveReleaseSocket)
         super.startSending(releaseSocket)
     }
 
@@ -253,12 +253,12 @@ class ViscaInquiry extends AbstractViscaMessage {
             data = packetName
         }
 
-        this._setState(PendingMessage.states.completed, data)
+        this._setState(Request.STATES.COMPLETED, data)
         return true
     }
 
     get answer () {
-        return this.promiseState(PendingMessage.states.completed)
+        return this.promiseState(Request.STATES.COMPLETED)
     }
 }
 
@@ -269,7 +269,7 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
     constructor(command, parameters) {
         super(command, parameters)
         
-        this._stateMap[PendingMessage.states.sent].parseFunction = this.parseAnswer.bind(this)
+        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAnswer.bind(this)
     }
 
     parseAnswer (payload) {
@@ -279,12 +279,12 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
             return false
         }
 
-        this._setState(PendingMessage.states.completed, [packetName, parameters])
+        this._setState(Request.STATES.COMPLETED, [packetName, parameters])
         return true
     }
 
     promiseAnswer (answerName) {
-        return this.promiseState(PendingMessage.states.completed).then((data) => { 
+        return this.promiseState(Request.STATES.COMPLETED).then((data) => { 
             return new Promise((resolve, reject) => {
                 if (data[0] === answerName) { 
                     resolve(data[0])
@@ -296,7 +296,7 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
     }
 }
 
-class ControlCommand extends PendingMessage {
+class ControlCommand extends Request {
     // TODO Implement AbstractViscaMessage pattern
 
     static get type () { return [0x02, 0x00] }

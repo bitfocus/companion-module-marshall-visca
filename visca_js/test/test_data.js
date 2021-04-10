@@ -1,4 +1,4 @@
-const { Parameter, Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup } = require('../lib/requestClasses')
+const { Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup } = require('../lib/requestClasses')
 const utils = require('../lib/utils')
 
 const nSockets = 2

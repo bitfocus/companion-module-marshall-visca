@@ -27,10 +27,10 @@ const replyStruct = new PacketStruct(
 )
 
 const replies = [
-    replyStruct.createChild('Syntax Error', new Pattern('60 02'), undefined, Packet.types.ERROR),
-    replyStruct.createChild('Command buffer full', new Pattern('60 03'), undefined, Packet.types.ERROR),
-    replyStruct.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket)), undefined, Packet.types.ERROR),
-    replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.types.ERROR),
+    replyStruct.createChild('Syntax Error', new Pattern('60 02'), undefined, Packet.TYPES.ERROR),
+    replyStruct.createChild('Command buffer full', new Pattern('60 03'), undefined, Packet.TYPES.ERROR),
+    replyStruct.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
+    replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
 ]
 
 const requestSet = new CallStruct(
@@ -44,11 +44,11 @@ const requestSet = new CallStruct(
 const command = requestSet.createChildStruct(
     new Pattern('01'),
     undefined,
-    Packet.types.COMMAND,
+    Packet.TYPES.COMMAND,
     [
-        requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.types.ACK),
-        requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.types.COMPLETION),
-        requestSet.replyStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.types.ERROR) 
+        requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.TYPES.ACK),
+        requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.TYPES.COMPLETION),
+        requestSet.replyStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.TYPES.ERROR) 
     ]
 )
 
