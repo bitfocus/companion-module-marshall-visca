@@ -355,17 +355,18 @@ class CallStruct extends PacketStruct {
     }
 }
 
+const PacketTypes = Object.freeze({
+    ERROR: 'Error',
+    ACK: 'Ack',
+    COMPLETION: 'Completion',
+    ANSWER: 'Answer',
+    COMMAND: 'Command',
+    INQUERY: 'Inquery',
+    DEVICE_SETTING_COMMAND: 'Device Setting Command'
+})
 class Packet {
     static get TYPES() {
-        return Object.freeze({
-            ERROR: 'Error',
-            ACK: 'Ack',
-            COMPLETION: 'Completion',
-            ANSWER: 'Answer',
-            COMMAND: 'Command',
-            INQUERY: 'Inquery',
-            DEVICE_SETTING_COMMAND: 'Device Setting Command'
-        })
+        return PacketTypes
     }
 
     constructor(name, type, pattern, comment) {

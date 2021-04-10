@@ -1,33 +1,46 @@
 const utils = require('./utils')
 const { Packet } = require('./requestClasses')
 
+const RequestStates = Object.freeze({
+    PENDING: 0,
+    SENDING: 1,
+    SENT: 2,
+    ACK: 3,
+    COMPLETED: 4,
+    ERROR: -1
+})
 class Request {
     static get STATES () {
-        return Object.freeze({
-            PENDING: 0,
-            SENDING: 1,
-            SENT: 2,
-            ACK: 3,
-            COMPLETED: 4,
-            ERROR: -1
-        })
+        return RequestStates
     }
     static get type() { return undefined } // Abstract
-    static get expectedType() { return undefined } // Abstract
+    static get expectedType() { return [0x01, 0x11] }
 
-    constructor(payload=[]) {
-        this._payload = payload;
-        // this._state = PendingMessage.states.pending;
-        this._state = Request.STATES.SENT;
+    /**
+     * 
+     * @param {Call} call 
+     * @param {Object} parameterDict 
+     */
+    constructor(call, parameterDict) {
+        this._state = RequestStates.SENT;
+
+        this.call = call
+        this.parameterDict = parameterDict
+        
+        this._stateMap = {}
+        for (const [name, value] of Object.entries(RequestStates)) {
+            this._stateMap[value] = {
+                name: name,
+                callbacks: [],
+                data: undefined,
+                parseFunction: undefined
+            }
+        }
     }
 
     // eslint-disable-next-line no-unused-vars
     startSending (releaseSocket) {
-        this._state = Request.STATES.SENDING
-    }
-
-    wasSent () {
-        this._state = Request.STATES.SENT;
+        this._state = RequestStates.SENDING
     }
 
     get state() {
@@ -42,60 +55,14 @@ class Request {
         return this.constructor.expectedType;
     }
 
-    get payload() {
-        return this._payload;
-    }
-
-    set payload(value) {
-        if (this.state !== Request.STATES.PENDING) {
-            throw Error('Message already sent')
-        }
-        this._payload = value
-    }
-
-    receiveReply(payload) {
-        // TODO Delete line
-        console.log(`Payload: ${Buffer.from(payload).toString('hex').toUpperCase().match(/../g).join(' ')}, name: ${(this._command || {name: []}).name.slice(-1)}, parameters: ${JSON.stringify(this._parameters)}`)
-    }
-}
-
-class AbstractViscaMessage extends Request {
-    // TODO Merge with PendingMessage?
-
-    static get expectedType() { return [0x01, 0x11] }
-
-    /**
-     * 
-     * @param {Call} call 
-     * @param {Object} parameterDict 
-     */
-    constructor(call, parameterDict) {
-        super()
-        
-        this.call = call
-        this.parameterDict = parameterDict
-        
-        this._stateMap = {}
-        for (const [name, value] of Object.entries(Request.STATES)) {
-            this._stateMap[value] = {
-                name: name,
-                callbacks: [],
-                data: undefined,
-                parseFunction: undefined
-            }
-        }
-    }
-
     get stateObject () {
         return this._stateMap[this.state]
     }
 
-    get payload() {
-        return this.call.pattern.writePayload(this.parameterDict)
-    }
-
-    set payload(value) {
-        throw Error('Cannot set payload. Change parameters instead')
+    getFinalPayload() {
+        const payload = this.call.pattern.writePayload(this.parameterDict)
+        this._state = RequestStates.SENDING
+        return payload
     }
 
     identifyRecievedPayload(payload) {
@@ -108,7 +75,7 @@ class AbstractViscaMessage extends Request {
     }
 
     receiveReply (payload) {
-        super.receiveReply(payload)
+        console.log(`Payload: ${Buffer.from(payload).toString('hex').toUpperCase().match(/../g).join(' ')}, name: ${(this._command || {name: []}).name.slice(-1)}, parameters: ${JSON.stringify(this._parameters)}`)
         
         const parseFunction = this.stateObject.parseFunction
         if (parseFunction === undefined) {
@@ -150,7 +117,7 @@ class AbstractViscaMessage extends Request {
         if (parameters) {
             errorMessage += ` with parameters ${JSON.stringify(parameters)}`
         }
-        this._setState(Request.STATES.error, errorMessage)
+        this._setState(RequestStates.ERROR, errorMessage)
         return true
     } 
 
@@ -162,26 +129,26 @@ class AbstractViscaMessage extends Request {
                 resolve(this.stateObject.data)
             } else {
                 this._stateMap[state].callbacks.push(resolve)
-                this._stateMap[Request.STATES.error].callbacks.push(reject)
+                this._stateMap[RequestStates.ERROR].callbacks.push(reject)
             }
         })
     }
 }
 
-class ViscaCommand extends AbstractViscaMessage {
+class ViscaCommand extends Request {
     static get type () { return [0x01, 0x00] }
     
     constructor(call, parameterDict) {
         super(call, parameterDict)
         
-        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAck.bind(this)
-        this._stateMap[Request.STATES.ACK].parseFunction = this.parseCompletion.bind(this)
+        this._stateMap[RequestStates.SENT].parseFunction = this.parseAck.bind(this)
+        this._stateMap[RequestStates.ACK].parseFunction = this.parseCompletion.bind(this)
     }
 
     startSending (releaseSocket) {
         let saveReleaseSocket = () => { try { releaseSocket() } catch (_) { }}
-        this._stateMap[Request.STATES.COMPLETED].callbacks.push(saveReleaseSocket)
-        this._stateMap[Request.STATES.error].callbacks.push(saveReleaseSocket)
+        this._stateMap[RequestStates.COMPLETED].callbacks.push(saveReleaseSocket)
+        this._stateMap[RequestStates.ERROR].callbacks.push(saveReleaseSocket)
         super.startSending(releaseSocket)
     }
 
@@ -196,7 +163,7 @@ class ViscaCommand extends AbstractViscaMessage {
         }
         
         this.socket = parameters['Socket']
-        this._setState(Request.STATES.ACK)
+        this._setState(RequestStates.ACK)
         return true
     }
 
@@ -210,32 +177,32 @@ class ViscaCommand extends AbstractViscaMessage {
             throw Error(`Expected completion message but received '${packetName}' with parameters ${JSON.stringify(parameters)}`)
         }
         
-        this._setState(Request.STATES.COMPLETED)
+        this._setState(RequestStates.COMPLETED)
         return true
    }
 
     get ack () {
-        return this.promiseState(Request.STATES.ACK)
+        return this.promiseState(RequestStates.ACK)
     }
 
     get completion () {
-        return this.promiseState(Request.STATES.COMPLETED)
+        return this.promiseState(RequestStates.COMPLETED)
     }
 }
 
-class ViscaInquiry extends AbstractViscaMessage {
+class ViscaInquiry extends Request {
     static get type () { return [0x01, 0x10] }
     
     constructor(command, parameters) {
         super(command, parameters)
 
-        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAnswer.bind(this)
+        this._stateMap[RequestStates.SENT].parseFunction = this.parseAnswer.bind(this)
     }
 
     startSending (releaseSocket) {
         let saveReleaseSocket = () => { try { releaseSocket() } catch (_) { }}
-        this._stateMap[Request.STATES.COMPLETED].callbacks.push(saveReleaseSocket)
-        this._stateMap[Request.STATES.error].callbacks.push(saveReleaseSocket)
+        this._stateMap[RequestStates.COMPLETED].callbacks.push(saveReleaseSocket)
+        this._stateMap[RequestStates.ERROR].callbacks.push(saveReleaseSocket)
         super.startSending(releaseSocket)
     }
 
@@ -253,23 +220,23 @@ class ViscaInquiry extends AbstractViscaMessage {
             data = packetName
         }
 
-        this._setState(Request.STATES.COMPLETED, data)
+        this._setState(RequestStates.COMPLETED, data)
         return true
     }
 
     get answer () {
-        return this.promiseState(Request.STATES.COMPLETED)
+        return this.promiseState(RequestStates.COMPLETED)
     }
 }
 
-class ViscaDeviceSettingCommand extends AbstractViscaMessage {
+class ViscaDeviceSettingCommand extends Request {
     
     static get type () { return [0x01, 0x20] }
     
     constructor(command, parameters) {
         super(command, parameters)
         
-        this._stateMap[Request.STATES.SENT].parseFunction = this.parseAnswer.bind(this)
+        this._stateMap[RequestStates.SENT].parseFunction = this.parseAnswer.bind(this)
     }
 
     parseAnswer (payload) {
@@ -279,12 +246,12 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
             return false
         }
 
-        this._setState(Request.STATES.COMPLETED, [packetName, parameters])
+        this._setState(RequestStates.COMPLETED, [packetName, parameters])
         return true
     }
 
     promiseAnswer (answerName) {
-        return this.promiseState(Request.STATES.COMPLETED).then((data) => { 
+        return this.promiseState(RequestStates.COMPLETED).then((data) => { 
             return new Promise((resolve, reject) => {
                 if (data[0] === answerName) { 
                     resolve(data[0])
@@ -296,30 +263,8 @@ class ViscaDeviceSettingCommand extends AbstractViscaMessage {
     }
 }
 
-class ControlCommand extends Request {
-    // TODO Implement AbstractViscaMessage pattern
-
-    static get type () { return [0x02, 0x00] }
-    static get expectedType() { return [0x02, 0x01] }
-
-    constructor(payload) {
-        super(payload)
-    }
-
-    startSending (releaseSocket) {
-        this._releaseSocket = () => { try { releaseSocket() } catch (_) { }}
-        super.startSending(releaseSocket)
-    }
-
-    wasSent () {
-        this._releaseSocket()
-        super.wasSent()
-    }
-}
-
 module.exports = {
     ViscaCommand: ViscaCommand,
     ViscaInquery: ViscaInquiry,
     ViscaDeviceSettingCommand: ViscaDeviceSettingCommand, 
-    ControlCommand: ControlCommand
 }
