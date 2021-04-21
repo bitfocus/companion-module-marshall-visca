@@ -1,6 +1,6 @@
 const { Packet } = require('./Packets')
 
-const TaskStates = Object.freeze({
+const RequestStates = Object.freeze({
     PENDING: 0,
     SENDING: 1,
     SENT: 2,
@@ -10,15 +10,15 @@ const TaskStates = Object.freeze({
 })
 
 const StateTransition = Object.freeze({
-    [Packet.TYPES.ERROR]: TaskStates.ERROR,
-    [Packet.TYPES.ACK]: TaskStates.ACK,
-    [Packet.TYPES.COMPLETION]: TaskStates.COMPLETED,
-    [Packet.TYPES.ANSWER]: TaskStates.COMPLETED,
+    [Packet.TYPES.ERROR]: RequestStates.ERROR,
+    [Packet.TYPES.ACK]: RequestStates.ACK,
+    [Packet.TYPES.COMPLETION]: RequestStates.COMPLETED,
+    [Packet.TYPES.ANSWER]: RequestStates.COMPLETED,
 })
 
-class Task {
+class Request {
     static get STATES() {
-        return TaskStates
+        return RequestStates
     }
     
     /**
@@ -31,7 +31,7 @@ class Task {
         this.parameterDict = parameterDict
         
         this._stateMap = new Map()
-        for (const [name, value] of Object.entries(TaskStates)) {
+        for (const [name, value] of Object.entries(RequestStates)) {
             let receive, reject
             const promise = new Promise((_receive, _reject) => {
                 receive = _receive
@@ -47,7 +47,7 @@ class Task {
             })
         }
 
-        this._setState(TaskStates.PENDING)
+        this._setState(RequestStates.PENDING)
     }
 
     get state() {
@@ -59,12 +59,12 @@ class Task {
     }
 
     confirmSent() {
-        this._setState(TaskStates.SENT)
+        this._setState(RequestStates.SENT)
     }
 
     getFinalPayload() {
         const payload = this.command.pattern.writePayload(this.parameterDict)
-        this._setState(TaskStates.SENDING)
+        this._setState(RequestStates.SENDING)
         return payload
     }
 
@@ -94,7 +94,7 @@ class Task {
         }
         
         if (identifiedReply.packet.type === Packet.TYPES.ERROR) {
-            this._setState(TaskStates.ERROR, identifiedReply)
+            this._setState(RequestStates.ERROR, identifiedReply)
         } else {
             if (identifiedReply.packet.type !== expectedType) {
                 console.error('some error')
@@ -105,17 +105,17 @@ class Task {
 
     _setState(newState, data) {
         const oldState = this._state
-        if (oldState === TaskStates.ERROR) {
+        if (oldState === RequestStates.ERROR) {
             throw new Error('Cannot change state, because the current state is error')
         }
-        if (newState !== TaskStates.ERROR && oldState >= newState) {
+        if (newState !== RequestStates.ERROR && oldState >= newState) {
             throw new Error(`Cannot change state, because the current state is ${oldState}`)
         }
         this._state = newState
         
-        if (newState === TaskStates.ERROR) {
+        if (newState === RequestStates.ERROR) {
             this._stateMap.get(newState).receive(data)
-            for (let stateNumber = oldState + 1; stateNumber <= TaskStates.COMPLETED; stateNumber++) {
+            for (let stateNumber = oldState + 1; stateNumber <= RequestStates.COMPLETED; stateNumber++) {
                 this._stateMap.get(stateNumber).reject(data)
             }
         } else {
@@ -123,31 +123,31 @@ class Task {
                 this._stateMap.get(stateNumber).receive()
             }
             this._stateMap.get(newState).receive(data)
-            if (newState === TaskStates.COMPLETED) {
-                this._stateMap.get(TaskStates.ERROR).reject(data)
+            if (newState === RequestStates.COMPLETED) {
+                this._stateMap.get(RequestStates.ERROR).reject(data)
             }
         }
     }
 }
 
-class ActionTask extends Task {
+class ActionRequest extends Request {
     constructor(command, parameterDict) {
         super(command, parameterDict)
         
-        this._stateMap.get(TaskStates.SENT).expectedType = Packet.TYPES.ACK
-        this._stateMap.get(TaskStates.ACK).expectedType = Packet.TYPES.COMPLETION
+        this._stateMap.get(RequestStates.SENT).expectedType = Packet.TYPES.ACK
+        this._stateMap.get(RequestStates.ACK).expectedType = Packet.TYPES.COMPLETION
     }
 
     get ack() {
-        return this._stateMap.get(TaskStates.ACK).promise
+        return this._stateMap.get(RequestStates.ACK).promise
     }
 
     get completion() {
-        return this._stateMap.get(TaskStates.COMPLETED).promise
+        return this._stateMap.get(RequestStates.COMPLETED).promise
     }
 }
 
 module.exports = {
-    Task,
-    ViscaCommand: ActionTask
+    Request,
+    ActionRequest
 }

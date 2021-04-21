@@ -50,7 +50,7 @@ const requestSet = new CommandStruct(
 const command = requestSet.createChildStruct(
     new Pattern('01'),
     undefined,
-    Packet.TYPES.COMMAND,
+    Packet.TYPES.TASK,
     [
         requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.TYPES.ACK),
         requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.TYPES.COMPLETION),

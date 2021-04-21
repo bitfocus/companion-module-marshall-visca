@@ -52,7 +52,7 @@ const PacketTypes = Object.freeze({
     ACK: Symbol('Ack'),
     COMPLETION: Symbol('Completion'),
     ANSWER: Symbol('Answer'),
-    COMMAND: Symbol('Command'),
+    TASK: Symbol('Task'),
     INQUERY: Symbol('Inquery'),
     DEVICE_SETTING_COMMAND: Symbol('Device Setting Command')
 })

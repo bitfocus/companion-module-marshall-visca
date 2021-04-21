@@ -50,7 +50,7 @@ const ViscaPacketPayloadTypeMapping = Object.freeze({
     [Packet.TYPES.ACK]: PayloadTypes.VISCA_REPLY,
     [Packet.TYPES.COMPLETION]: PayloadTypes.VISCA_REPLY,
     [Packet.TYPES.ANSWER]: PayloadTypes.VISCA_REPLY,
-    [Packet.TYPES.COMMAND]: PayloadTypes.VISCA_COMMAND,
+    [Packet.TYPES.TASK]: PayloadTypes.VISCA_COMMAND,
     [Packet.TYPES.INQUERY]: PayloadTypes.VISCA_INQUERY,
     [Packet.TYPES.DEVICE_SETTING_COMMAND]: PayloadTypes.VISCA_DEVICE_SETTING_COMMAND
 })

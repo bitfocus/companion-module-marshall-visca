@@ -1,4 +1,4 @@
-const { ActionTask } = require('./Task')
+const { ActionRequest } = require('./Request')
 const async = require('async')
 
 class ViscaCamera {
@@ -12,28 +12,28 @@ class ViscaCamera {
         this.sendingQueue = new async.queue(this._queueWorker.bind(this), this.nSockets)
     }
     
-    _queueWorker(task, releaseSocket) {
-        this._sendTask(task)
+    _queueWorker(request, releaseSocket) {
+        this._sendRequest(request)
         releaseSocket()
     }
 
-    _queueTask(task) {
-        this.sendingQueue.push(task)
+    _queueRequest(request) {
+        this.sendingQueue.push(request)
     }
 
-    _sendTask(task) {
-        this.viscaSocket.sendMessage(task).then((openViscaSocket) => {
-            task.confirmSent()
+    _sendRequest(request) {
+        this.viscaSocket.sendMessage(request).then((openViscaSocket) => {
+            request.confirmSent()
             openViscaSocket.on('message', (payload) => {
-                task.receiveReply(payload)
+                request.receiveReply(payload)
             })
         })
     }
 
     sendViscaMessage(message) {
-        let task = new ActionTask(message)
-        this._queueTask(task)
-        return task
+        let request = new ActionRequest(message)
+        this._queueRequest(request)
+        return request
     }
 }
 
