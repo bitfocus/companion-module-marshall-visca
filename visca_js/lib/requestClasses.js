@@ -2,10 +2,6 @@
 const utils = require('./utils')
 
 class Parameter {
-    static fromOptions({ name, comment }) {
-        return new this(name, comment)
-    }
-
     constructor(name, comment) {
         this.name = name
         this.comment = comment
@@ -15,37 +11,16 @@ class Parameter {
         throw Error('Function not implemented')
     }
 
-    defaultNHex({}) {
-        return 1
-    }
+    createParameterGroup() {
+        const nHex = 1
+        const encoder = () => Array(nHex)
+        const decoder = () => ({ [this.name]: undefined })
 
-    defaultEncoder(nHex, {}) {
-        return () => Array(nHex)
-    }
-
-    defaultDecoder({}) {
-        return () => ({ [this.name]: undefined })
-    }
-
-    createCoder({ encoder, decoder, nHex }, options={}) {
-        if (typeof nHex === 'undefined') {
-            nHex = this.defaultNHex(options)
-        }
-        if (typeof encoder === 'undefined') {
-            encoder = this.defaultEncoder(nHex, options)
-        }
-        if (typeof decoder === 'undefined') {
-            decoder = this.defaultDecoder(options)
-        }
-        return { encoder: encoder, decoder: decoder, nHex: nHex }
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class Range extends Parameter {
-    static fromOptions({ name, min, max, comment }) {
-        return new this(name, min, max, comment)
-    }
-    
     constructor(name, min, max, comment) {
         super(name, comment)
         
@@ -61,35 +36,29 @@ class Range extends Parameter {
         return (value >= this.min && value <= this.max)
     }
 
-    defaultNHex() {
-        return this.max.toString(16).length
-    }
+    createParameterGroup(nHex) {
+        // nHex ??= this.max.toString(16).length // Node 15.0
+        if (nHex === undefined) {
+            nHex = this.max.toString(16).length
+        }
 
-    defaultEncoder(nHex, {}) {
-        return parameterDict => {
+        const encoder = parameterDict => {
             let value = parameterDict[this.name]
             let hexArray = utils.uintToHexArray(value, nHex)
             return hexArray
         }
-    }
 
-    defaultDecoder({}) {
-        return hexArray => {
+        const decoder = hexArray => {
             let value = utils.hexArrayToUint(hexArray)
             let parameterDict = { [this.name]: value }
             return parameterDict
         }
+
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class List extends Parameter {
-    static fromOptions({ name, itemNameArray, itemArray, comment }) {
-        if (typeof itemNameArray === 'undefined') {
-            itemNameArray = utils.itemArrayToValueArray(itemArray, 'name')
-        }
-        return new this(name, itemNameArray, comment)
-    }
-    
     constructor(name, itemNameArray, comment) {
         super(name, comment)
 
@@ -100,34 +69,44 @@ class List extends Parameter {
         return this.itemNameArray.includes(value)
     }
 
-    defaultNHex({ itemArray }) {
-        return Math.max(...itemArray.map(item => item.value.toString(16).length))
-    }
+    createParameterGroup(itemDict, nHex) {
+        // nHex ??= Math.max(Object.values(itemDict)).toString(16).length // Node 15.0
+        if (nHex === undefined) {
+            nHex = Math.max(...Object.values(itemDict)).toString(16).length
+        }
 
-    defaultEncoder(nHex, { itemArray }) {
-        return parameterDict => {
-            let itemName = parameterDict[this.name]
-            let item = utils.getObjectByKeyValuePair(itemArray, 'name', itemName)
-            let hexArray = utils.uintToHexArray(item.value, nHex)
+        const encoderMap = new Map()
+        const decoderMap = new Map()
+
+        this.itemNameArray.forEach(itemName => {
+            const itemValue = itemDict[itemName]
+            if (!Number.isInteger(itemValue)) {
+                throw new Error(`No valid value (${itemValue}) for item name ${itemName}`)
+            }
+
+            encoderMap.set(itemName, itemValue)
+            decoderMap.set(itemValue, itemName)
+        })
+
+        const encoder = parameterDict => {
+            const itemName = parameterDict[this.name]
+            const itemValue = encoderMap.get(itemName)
+            const hexArray = utils.uintToHexArray(itemValue, nHex)
             return hexArray
         }
-    }
 
-    defaultDecoder({ itemArray }) {
-        return hexArray => {
+        const decoder = hexArray => {
             let itemValue = utils.hexArrayToUint(hexArray)
-            let item = utils.getObjectByKeyValuePair(itemArray, 'value', itemValue)
-            let parameterDict = { [this.name]: item.name}
+            let itemName = decoderMap.get(itemValue)
+            let parameterDict = { [this.name]: itemName }
             return parameterDict
         }
+
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class HexLiteral extends Parameter {
-    static fromOptions({ name, nHex, comment }) {
-        return new this(name, nHex, comment)
-    }
-    
     constructor(name, nHex, comment) {
         super(name, comment)
     
@@ -140,32 +119,26 @@ class HexLiteral extends Parameter {
         return hexArray.length === this.nHex && !hexArray.includes(NaN) && !byteArray.includes(0xFF)
     }
     
-    defaultNHex() {
-        return this.nHex
-    }
-
-    defaultEncoder(nHex) {
-        return parameterDict => {
+    createParameterGroup(spacer='') {
+        const nHex = this.nHex
+        
+        const encoder = parameterDict => {
             let hexString = parameterDict[this.name]
             let hexArray = utils.hexStringToHexArray(hexString).slice(0, nHex)
             return hexArray
         }
-    }
-    
-    defaultDecoder({ spacer='' }) {
-        return hexArray => {
+
+        const decoder = hexArray => {
             let hexString = utils.hexArrayToHexString(hexArray, spacer)
             let parameterDict = { [this.name]: hexString}
             return parameterDict
         }
+
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class IPv4 extends Parameter {
-    static fromOptions({ name, comment }) {
-        return new this(name, comment)
-    }
-    
     constructor(name, comment) {
         super(name, comment)
     }
@@ -176,36 +149,30 @@ class IPv4 extends Parameter {
         return oktetArray.length === 4 && oktetArray.every(oktet => oktet >= 0x00 && oktet <= 0xFF)
     }
     
-    defaultNHex() {
-        return 4
-    }
-
-    defaultEncoder(_nHex) {
-        return parameterDict => {
+    createParameterGroup() {
+        const nHex = 4
+        
+        const encoder = parameterDict => {
             let ipv4String = parameterDict[this.name]
             let oktetStringArray = ipv4String.split('.')
             let oktetArray = oktetStringArray.map(oktetString => Number(oktetString))
             let hexArray = utils.byteArrayToHexArray(oktetArray)
             return hexArray
         }
-    }
-    
-    defaultDecoder({}) {
-        return hexArray => {
+
+        const decoder = hexArray => {
             let oktetArray = utils.hexArrayToByteArray(hexArray)
             let oktetStringArray = oktetArray.map(oktet => String(oktet))
             let ipv4String = oktetStringArray.join('.')
             let parameterDict = { [this.name]: ipv4String}
             return parameterDict
         }
+
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class AsciiString extends Parameter {
-    static fromOptions({ name, nCharacters, comment }) {
-        return new this(name, nCharacters, comment)
-    }
-    
     constructor(name, nCharacters, comment) {
         super(name, comment)
 
@@ -217,46 +184,30 @@ class AsciiString extends Parameter {
         return value.length === this.nCharacters && /^[\x00-\x7F]*$/.test(value)
     }
     
-    defaultNHex() {
-        return this.nCharacters
-    }
-
-    defaultEncoder(_nHex) {
-        return parameterDict => {
+    createParameterGroup() {
+        const nHex = this.nCharacters
+        
+        const encoder = parameterDict => {
             let string = parameterDict[this.name]
             let characterArray = string.split('')
             let byteArray = characterArray.map(character => character.charCodeAt(0))
             let hexArray = utils.byteArrayToHexArray(byteArray)
             return hexArray
         }
-    }
-    
-    defaultDecoder({}) {
-        return hexArray => {
+
+        const decoder = hexArray => {
             let byteArray = utils.hexArrayToByteArray(hexArray)
             let characterArray = byteArray.map(byte => String.fromCharCode(byte))
             let string = characterArray.join('')
             let parameterDict = { [this.name]: string}
             return parameterDict
         }
+        
+        return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
 
 class ParameterGroup {
-    static fromParameterClass(ParameterClass, options) {
-        let parameter = ParameterClass.fromOptions(options)
-        let coder = {
-            nHex: options.nHex,
-            encoder: options.encoder,
-            decoder: options.decoder
-        }
-        return this.fromParameter(parameter, coder, options)
-    }
-
-    static fromParameter(parameter, coder={}, options={}) {
-        return new this.prototype.constructor(parameter, parameter.createCoder(coder, options))
-    }
-
     constructor(parameterArray, { encoder, decoder, nHex }) {
         if (parameterArray instanceof Parameter) {
             this.parameterArray = [ parameterArray ]
