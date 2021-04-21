@@ -43,14 +43,14 @@ class Range extends Parameter {
         }
 
         const encoder = parameterDict => {
-            let value = parameterDict[this.name]
-            let hexArray = utils.uintToHexArray(value, nHex)
+            const value = parameterDict[this.name]
+            const hexArray = utils.uintToHexArray(value, nHex)
             return hexArray
         }
 
         const decoder = hexArray => {
-            let value = utils.hexArrayToUint(hexArray)
-            let parameterDict = { [this.name]: value }
+            const value = utils.hexArrayToUint(hexArray)
+            const parameterDict = { [this.name]: value }
             return parameterDict
         }
 
@@ -96,9 +96,9 @@ class List extends Parameter {
         }
 
         const decoder = hexArray => {
-            let itemValue = utils.hexArrayToUint(hexArray)
-            let itemName = decoderMap.get(itemValue)
-            let parameterDict = { [this.name]: itemName }
+            const itemValue = utils.hexArrayToUint(hexArray)
+            const itemName = decoderMap.get(itemValue)
+            const parameterDict = { [this.name]: itemName }
             return parameterDict
         }
 
@@ -114,8 +114,8 @@ class HexLiteral extends Parameter {
     }
 
     validate(value) {
-        let hexArray = utils.hexStringToHexArray(value)
-        let byteArray = utils.hexArrayToByteArray(hexArray)
+        const hexArray = utils.hexStringToHexArray(value)
+        const byteArray = utils.hexArrayToByteArray(hexArray)
         return hexArray.length === this.nHex && !hexArray.includes(NaN) && !byteArray.includes(0xFF)
     }
     
@@ -123,14 +123,14 @@ class HexLiteral extends Parameter {
         const nHex = this.nHex
         
         const encoder = parameterDict => {
-            let hexString = parameterDict[this.name]
-            let hexArray = utils.hexStringToHexArray(hexString).slice(0, nHex)
+            const hexString = parameterDict[this.name]
+            const hexArray = utils.hexStringToHexArray(hexString).slice(0, nHex)
             return hexArray
         }
 
         const decoder = hexArray => {
-            let hexString = utils.hexArrayToHexString(hexArray, spacer)
-            let parameterDict = { [this.name]: hexString}
+            const hexString = utils.hexArrayToHexString(hexArray, spacer)
+            const parameterDict = { [this.name]: hexString}
             return parameterDict
         }
 
@@ -144,8 +144,8 @@ class IPv4 extends Parameter {
     }
 
     validate(value) {
-        let oktetStringArray = value.split('.')
-        let oktetArray = oktetStringArray.map(oktetString => Number(oktetString))
+        const oktetStringArray = value.split('.')
+        const oktetArray = oktetStringArray.map(oktetString => Number(oktetString))
         return oktetArray.length === 4 && oktetArray.every(oktet => oktet >= 0x00 && oktet <= 0xFF)
     }
     
@@ -153,18 +153,18 @@ class IPv4 extends Parameter {
         const nHex = 4
         
         const encoder = parameterDict => {
-            let ipv4String = parameterDict[this.name]
-            let oktetStringArray = ipv4String.split('.')
-            let oktetArray = oktetStringArray.map(oktetString => Number(oktetString))
-            let hexArray = utils.byteArrayToHexArray(oktetArray)
+            const ipv4String = parameterDict[this.name]
+            const oktetStringArray = ipv4String.split('.')
+            const oktetArray = oktetStringArray.map(oktetString => Number(oktetString))
+            const hexArray = utils.byteArrayToHexArray(oktetArray)
             return hexArray
         }
 
         const decoder = hexArray => {
-            let oktetArray = utils.hexArrayToByteArray(hexArray)
-            let oktetStringArray = oktetArray.map(oktet => String(oktet))
-            let ipv4String = oktetStringArray.join('.')
-            let parameterDict = { [this.name]: ipv4String}
+            const oktetArray = utils.hexArrayToByteArray(hexArray)
+            const oktetStringArray = oktetArray.map(oktet => String(oktet))
+            const ipv4String = oktetStringArray.join('.')
+            const parameterDict = { [this.name]: ipv4String}
             return parameterDict
         }
 
@@ -188,21 +188,21 @@ class AsciiString extends Parameter {
         const nHex = this.nCharacters
         
         const encoder = parameterDict => {
-            let string = parameterDict[this.name]
-            let characterArray = string.split('')
-            let byteArray = characterArray.map(character => character.charCodeAt(0))
-            let hexArray = utils.byteArrayToHexArray(byteArray)
+            const string = parameterDict[this.name]
+            const characterArray = string.split('')
+            const byteArray = characterArray.map(character => character.charCodeAt(0))
+            const hexArray = utils.byteArrayToHexArray(byteArray)
             return hexArray
         }
 
         const decoder = hexArray => {
-            let byteArray = utils.hexArrayToByteArray(hexArray)
-            let characterArray = byteArray.map(byte => String.fromCharCode(byte))
-            let string = characterArray.join('')
-            let parameterDict = { [this.name]: string}
+            const byteArray = utils.hexArrayToByteArray(hexArray)
+            const characterArray = byteArray.map(byte => String.fromCharCode(byte))
+            const string = characterArray.join('')
+            const parameterDict = { [this.name]: string}
             return parameterDict
         }
-        
+
         return new ParameterGroup(this, { nHex, encoder, decoder })
     }
 }
@@ -250,7 +250,7 @@ class ParameterGroup {
 
     verifyParameterDict(parameterDict) {
         for (const parameter of this.parameterArray) {
-            let value = parameterDict[parameter.name]
+            const value = parameterDict[parameter.name]
             if (typeof value === 'undefined') { throw Error(`Parameter not found in parameter dict: ${parameter.name}`)}
             if (!parameter.validate(value)) { throw Error(`Parameter for ${parameter.name} invalid: ${value}`)}
         }
@@ -355,11 +355,11 @@ class Match {
 
 class Pattern {
     constructor(patternString, matchArray=[]) {
-        let charArray = patternString.replace(/\s+/g, '').split('')
+        const charArray = patternString.replace(/\s+/g, '').split('')
         if (matchArray instanceof Match) {
             matchArray = [ matchArray ]
         }
-        let markerDict = {}
+        const markerDict = {}
         this.parameterGroups = new Set()
         
         for (const match of matchArray) {
@@ -377,7 +377,7 @@ class Pattern {
         }
         
         this.hexPayloadTemplate = charArray.map((char) => {
-            let hex = parseInt(char, 16)
+            const hex = parseInt(char, 16)
             if (isNaN(hex)) {
                 if (!markerDict[char].length) { throw new Error('Pattern string and match array do not fit')}
                 return markerDict[char].shift()
@@ -397,13 +397,13 @@ class Pattern {
     }
 
     writePayload(parameterDict) {
-        let parameterGroupsHexArray = new Map()
+        const parameterGroupsHexArray = new Map()
 
         for (const parameterGroup of this.parameterGroups) {
             parameterGroupsHexArray.set(parameterGroup, parameterGroup.encoder(parameterDict))
         }
 
-        let hexPayload = this.hexPayloadTemplate.map(element => {
+        const hexPayload = this.hexPayloadTemplate.map(element => {
             if (typeof element === 'number') {
                 return element
             } else {
@@ -411,7 +411,7 @@ class Pattern {
             }
         })
 
-        let payload = hexPayload.flatMap((halfByte, idx, hexPayload) => 
+        const payload = hexPayload.flatMap((halfByte, idx, hexPayload) => 
             (idx % 2) ? [ 0x10 * hexPayload[idx-1] + hexPayload[idx] ] : []
         )
 
@@ -421,9 +421,9 @@ class Pattern {
     readPayload(payload) {
         if (payload.length * 2 !== this.hexPayloadTemplate.length) { throw Error('Pattern has not the same length as the payload')}
 
-        let hexPayload = payload.flatMap(byte => [ Math.floor(byte / 0x10), byte % 0x10 ])
+        const hexPayload = payload.flatMap(byte => [ Math.floor(byte / 0x10), byte % 0x10 ])
 
-        let parameterGroupsHexArray = new Map()
+        const parameterGroupsHexArray = new Map()
         
         for (const parameterGroup of this.parameterGroups) {
             parameterGroupsHexArray.set(parameterGroup, [])
@@ -448,7 +448,7 @@ class Pattern {
     }
 
     static concat(...patternArray) { // should handle 'undefined' and n>=0 arguments
-        let newPattern = new Pattern('', [])
+        const newPattern = new Pattern('', [])
         
         for (const pattern of patternArray) {
             if (pattern === undefined) { continue }
