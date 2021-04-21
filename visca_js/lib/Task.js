@@ -23,11 +23,11 @@ class Task {
     
     /**
      * 
-     * @param {Call} call 
+     * @param {Command} command 
      * @param {Object} parameterDict 
      */
-    constructor(call, parameterDict) {
-        this.call = call
+    constructor(command, parameterDict) {
+        this.command = command
         this.parameterDict = parameterDict
         
         this._stateMap = new Map()
@@ -63,13 +63,13 @@ class Task {
     }
 
     getFinalPayload() {
-        const payload = this.call.pattern.writePayload(this.parameterDict)
+        const payload = this.command.pattern.writePayload(this.parameterDict)
         this._setState(TaskStates.SENDING)
         return payload
     }
 
     identifyRecievedPayload(payload) {
-        for (const reply of this.call.replies) {
+        for (const reply of this.command.replies) {
             try {
                 const parameterDict = reply.pattern.readPayload(payload)
                 return { packet: reply, parameterDict }
@@ -131,8 +131,8 @@ class Task {
 }
 
 class ActionTask extends Task {
-    constructor(call, parameterDict) {
-        super(call, parameterDict)
+    constructor(command, parameterDict) {
+        super(command, parameterDict)
         
         this._stateMap.get(TaskStates.SENT).expectedType = Packet.TYPES.ACK
         this._stateMap.get(TaskStates.ACK).expectedType = Packet.TYPES.COMPLETION

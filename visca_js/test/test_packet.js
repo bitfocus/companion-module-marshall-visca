@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-const { CallStruct, PacketStruct, Packet, Pattern, Match } = require('../lib/Packets')
+const { CommandStruct, PacketStruct, Packet, Pattern, Match } = require('../lib/Packets')
 const { List, Range, ParameterGroup } = require('../lib/Parameters.js')
 
 const nSockets = 2
@@ -69,7 +69,7 @@ const replies = [
     replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
 ]
 
-const requestSet = new CallStruct(
+const requestSet = new CommandStruct(
     new Pattern('8x', [ new Match('x', receiverAddress) ]),
     new Pattern('FF'),
     undefined,

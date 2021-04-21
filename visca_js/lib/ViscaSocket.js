@@ -70,7 +70,7 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 
     async sendMessage(message) {
         const sequenceNumber = (await this.sequenceNumber.next()).value
-        const payloadType = ViscaPacketPayloadTypeMapping[message.call.type]
+        const payloadType = ViscaPacketPayloadTypeMapping[message.command.type]
         const payloadTypeBytes = PayloadTypeBytes[payloadType]
         const openViscaSocket = await this._send(payloadTypeBytes, sequenceNumber, message.getFinalPayload())
         return openViscaSocket

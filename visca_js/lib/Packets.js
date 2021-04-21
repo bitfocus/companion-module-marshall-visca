@@ -19,7 +19,7 @@ class PacketStruct {
     }
 }
 
-class CallStruct extends PacketStruct {
+class CommandStruct extends PacketStruct {
     constructor(prefix, postfix, type, replies=[], replyStruct)  {
         super(prefix, postfix, type)
 
@@ -35,7 +35,7 @@ class CallStruct extends PacketStruct {
         
         const childReplyStruct = this.replyStruct.createChildStruct(replyPrefix, replyPostfix)
         
-        return new CallStruct(childPrefix, childPostfix, type, childReplies, childReplyStruct)
+        return new CommandStruct(childPrefix, childPostfix, type, childReplies, childReplyStruct)
     }
 
     createChild(name, core, comment, type=this.type, replies=[]) {
@@ -43,7 +43,7 @@ class CallStruct extends PacketStruct {
         
         const childReplies = [...this.replies, ...replies]
         
-        return new Call(name, type, pattern, comment, childReplies)
+        return new Command(name, type, pattern, comment, childReplies)
     }
 }
 
@@ -70,7 +70,7 @@ class Packet {
     }
 }
 
-class Call extends Packet {
+class Command extends Packet {
     constructor(name, type, pattern, comment, replies) {
         super(name, type, pattern, comment)
         this.replies = replies
@@ -205,8 +205,8 @@ class Pattern {
 module.exports = {
     Pattern,
     Match,
-    CallStruct,
-    Call,
+    CommandStruct,
+    Command,
     PacketStruct,
     Packet
 }

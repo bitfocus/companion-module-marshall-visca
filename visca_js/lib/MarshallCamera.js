@@ -1,4 +1,4 @@
-const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./Packets')
+const { CommandStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./Packets')
 const { Udp } = require('./Connection')
 const ViscaOverIpSocket = require('./ViscaSocket')
 const ViscaCamera = require('./ViscaCamera')
@@ -39,7 +39,7 @@ const replies = [
     replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
 ]
 
-const requestSet = new CallStruct(
+const requestSet = new CommandStruct(
     new Pattern('8x', [ new Match('x', receiverAddress) ]),
     new Pattern('FF'),
     undefined,
