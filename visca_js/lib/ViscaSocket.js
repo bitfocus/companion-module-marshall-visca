@@ -1,5 +1,5 @@
 const EventEmitter = require('events')
-const { Packet } = require('./requestClasses')
+const { Packet } = require('./Packets')
 const utils = require('./utils')
 
 class OpenViscaSocket extends EventEmitter {

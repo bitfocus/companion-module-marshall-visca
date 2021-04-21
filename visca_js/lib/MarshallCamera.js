@@ -1,4 +1,4 @@
-const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./requestClasses')
+const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('./Packets')
 const { Udp } = require('./Connection')
 const ViscaOverIpSocket = require('./ViscaSocket')
 const ViscaCamera = require('./ViscaCamera')
@@ -71,36 +71,27 @@ const focus_nearVariable = focus.createChild('Near (Variable)', new Pattern('08 
 const focus_direct = focus.createChild('Direct', new Pattern('48 0p 0q 0r 0s', new Match('pqrs', focusPosition)))
 const focus_mode = focus.createChild('Focus Mode', Pattern.concat(new Pattern('38'), Pattern.fromParameterGroup(focusMode)))
 
+const packets = Object.freeze([
+    power,
+    focus_stop,
+    focus_farStandard,
+    focus_nearStandard,
+    focus_farStep,
+    focus_nearStep,
+    focus_farVariable,
+    focus_nearVariable,
+    focus_direct,
+    focus_mode,
+])
 class MarshallCamera extends ViscaCamera {
 
     constructor(ip, address=1) {
-        let connection = new Udp(ip)
-        let viscaSocket = new ViscaOverIpSocket(connection, address, nSockets)
+        const connection = new Udp(ip)
+        const viscaSocket = new ViscaOverIpSocket(connection, address, nSockets)
 
         super(viscaSocket)
-
-        this._requestSet = {
-            packets: {
-                'command': {
-                    packets: {
-                        'CAM_Power': power,
-                        'CAM_Focus': {
-                            packets: {
-                                'Stop': focus_stop,
-                                'Far (Standard)': focus_farStandard,
-                                'Near (Standard)': focus_nearStandard,
-                                'Far Step': focus_farStep,
-                                'Near Step': focus_nearStep,
-                                'Far (Variable)': focus_farVariable,
-                                'Near (Variable)': focus_nearVariable,
-                                'Direct': focus_direct,
-                                'Mode': focus_mode
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        
+        this.packets = packets
     }
 }
 

@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
-const { CallStruct, PacketStruct, Packet, Range, List, ParameterGroup, Pattern, Match } = require('../lib/requestClasses')
+const { CallStruct, PacketStruct, Packet, Pattern, Match } = require('../lib/Packets')
+const { List, Range, ParameterGroup } = require('../lib/Parameters.js')
 
 const nSockets = 2
 

@@ -1,4 +1,5 @@
-const { Match, List, Range, ParameterGroup, Pattern } = require('../lib/requestClasses.js')
+const { Match, Pattern } = require('../lib/Packets.js')
+const { List, Range, ParameterGroup } = require('../lib/Parameters.js')
 
 const createPayload = (hexPayload) => 
     hexPayload.flatMap((halfByte, idx, hexPayload) => 
