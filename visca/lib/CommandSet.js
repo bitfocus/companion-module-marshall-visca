@@ -1,5 +1,6 @@
 class CommandSet {
     constructor(commandArray) {
+        this._commandArray = commandArray
         this._commandMapMap = new Map()
         commandArray.forEach(command => {
             const name = command.name
@@ -23,6 +24,10 @@ class CommandSet {
             return undefined
         }
         return familyMap.get(name)
+    }
+
+    list() {
+        return this._commandArray
     }
 }
 

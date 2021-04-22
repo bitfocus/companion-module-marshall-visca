@@ -139,6 +139,16 @@ class Pattern {
         return new Pattern(patternString, new Match(patternString, parameterGroup))
     }
 
+    getParameters() {
+        const parameterSet = new Set()
+        this.parameterGroups.forEach(parameterGroup => {
+            parameterGroup.parameterArray.forEach(parameter => {
+                parameterSet.add(parameter)
+            })
+        })
+        return parameterSet
+    }
+
     writePayload(parameterDict) {
         const parameterGroupsHexArray = new Map()
 
