@@ -1,13 +1,18 @@
 const { ActionRequest } = require('./Request')
+const CommandSet = require('./CommandSet')
 const async = require('async')
 
+const commands = new CommandSet([])
+
 class ViscaCamera {
+    static get COMMANDS() {
+        return commands
+    }
+
     constructor(viscaSocket, address=1, nSockets=2) {
         this.viscaSocket = viscaSocket
         this.address = address
         this.nSockets = nSockets
-
-        this.packets = []
 
         this.sendingQueue = new async.queue(this._queueWorker.bind(this), this.nSockets)
     }
@@ -30,8 +35,8 @@ class ViscaCamera {
         })
     }
 
-    sendViscaMessage(message) {
-        let request = new ActionRequest(message)
+    sendCommand(command, parameterDict) {
+        const request = new ActionRequest(command, parameterDict)
         this._queueRequest(request)
         return request
     }

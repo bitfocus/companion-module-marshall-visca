@@ -1,11 +1,11 @@
 var instance_skel = require('../../instance_skel');
-var MarshallController = require('./visca_js/index');
+var MarshallCamera = require('./visca/index');
 
 class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config)
 		
-		this.controller = new MarshallController('192.168.102.33')
+		this.controller = new MarshallCamera('192.168.102.33')
 		this.initActions()
 	}
 

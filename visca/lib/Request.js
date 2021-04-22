@@ -26,7 +26,10 @@ class Request {
      * @param {Command} command 
      * @param {Object} parameterDict 
      */
-    constructor(command, parameterDict) {
+    constructor(command, parameterDict={}) {
+        if (command === undefined) {
+            throw new Error('No command specified to create request')
+        }
         this.command = command
         this.parameterDict = parameterDict
         

@@ -1,41 +1,42 @@
-class PacketStruct {
-    constructor(prefix, postfix, type) {
+class PacketFamily {
+    constructor(name, prefix, postfix, type) {
+        this.name = name
         this.prefix = prefix
         this.postfix = postfix
         this.type = type
     }
 
-    createChildStruct(prefix, postfix, type=this.type) {
+    createChildFamily(name, prefix, postfix, type=this.type) {
         const newPrefix = Pattern.concat(this.prefix, prefix)
         const newPostfix = Pattern.concat(postfix, this.postfix)
 
-        return new PacketStruct(newPrefix, newPostfix, type)
+        return new PacketFamily(name, newPrefix, newPostfix, type)
     }
 
     createChild(name, core, comment, type=this.type) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
-        return new Packet(name, type, pattern, comment)
+        return new Packet(name, this.name, type, pattern, comment)
     }
 }
 
-class CommandStruct extends PacketStruct {
-    constructor(prefix, postfix, type, replies=[], replyStruct)  {
-        super(prefix, postfix, type)
+class CommandFamily extends PacketFamily {
+    constructor(name, prefix, postfix, type, replies=[], replyFamily)  {
+        super(name, prefix, postfix, type)
 
         this.replies = replies
-        this.replyStruct = replyStruct
+        this.replyFamily = replyFamily
     }
 
-    createChildStruct(prefix, postfix, type=this.type, replies=[], replyPrefix, replyPostfix) {
+    createChildFamily(name, prefix, postfix, type=this.type, replies=[], replyPrefix, replyPostfix) {
         const childPrefix = Pattern.concat(this.prefix, prefix)
         const childPostfix = Pattern.concat(postfix, this.postfix)
 
         const childReplies = [...this.replies, ...replies]
         
-        const childReplyStruct = this.replyStruct.createChildStruct(replyPrefix, replyPostfix)
+        const childReplyFamily = this.replyFamily.createChildFamily(replyPrefix, replyPostfix)
         
-        return new CommandStruct(childPrefix, childPostfix, type, childReplies, childReplyStruct)
+        return new CommandFamily(name, childPrefix, childPostfix, type, childReplies, childReplyFamily)
     }
 
     createChild(name, core, comment, type=this.type, replies=[]) {
@@ -43,7 +44,7 @@ class CommandStruct extends PacketStruct {
         
         const childReplies = [...this.replies, ...replies]
         
-        return new Command(name, type, pattern, comment, childReplies)
+        return new Command(name, this.name, type, pattern, comment, childReplies)
     }
 }
 
@@ -62,8 +63,9 @@ class Packet {
         return PacketTypes
     }
 
-    constructor(name, type, pattern, comment) {
+    constructor(name, familyName, type, pattern, comment) {
         this.name = name
+        this.familyName = familyName
         this.type = type
         this.pattern = pattern
         this.comment = comment
@@ -71,8 +73,8 @@ class Packet {
 }
 
 class Command extends Packet {
-    constructor(name, type, pattern, comment, replies) {
-        super(name, type, pattern, comment)
+    constructor(name, familiyName, type, pattern, comment, replies) {
+        super(name, familiyName, type, pattern, comment)
         this.replies = replies
     }
 }
@@ -205,8 +207,8 @@ class Pattern {
 module.exports = {
     Pattern,
     Match,
-    CommandStruct,
+    CommandFamily: CommandFamily,
     Command,
-    PacketStruct,
+    PacketFamily,
     Packet
 }

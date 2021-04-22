@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-const { CommandStruct, PacketStruct, Packet, Pattern, Match } = require('../lib/Packets')
+const { CommandFamily, PacketFamily, Packet, Pattern, Match } = require('../lib/Packets')
 const { List, Range, ParameterGroup } = require('../lib/Parameters.js')
 
 const nSockets = 2
@@ -57,40 +57,40 @@ const receiverAddress = addressParameter.createParameterGroup()
 const socket = new Range('Socket', 1, nSockets).createParameterGroup()
 
 
-const replyStruct = new PacketStruct(
+const replyFamily = new PacketFamily(undefined,
     new Pattern('X0', [ new Match('X', senderAddress) ]),
     new Pattern('FF')
 )
 
 const replies = [
-    replyStruct.createChild('Syntax Error', new Pattern('60 02'), undefined, Packet.TYPES.ERROR),
-    replyStruct.createChild('Command buffer full', new Pattern('60 03'), undefined, Packet.TYPES.ERROR),
-    replyStruct.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
-    replyStruct.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
+    replyFamily.createChild('Syntax Error', new Pattern('60 02'), undefined, Packet.TYPES.ERROR),
+    replyFamily.createChild('Command buffer full', new Pattern('60 03'), undefined, Packet.TYPES.ERROR),
+    replyFamily.createChild('Command cancelled', new Pattern('6Y 04', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
+    replyFamily.createChild('No socket (to be cancelled)', new Pattern('6Y 05', new Match('Y', socket)), undefined, Packet.TYPES.ERROR),
 ]
 
-const requestSet = new CommandStruct(
+const requestSet = new CommandFamily(undefined,
     new Pattern('8x', [ new Match('x', receiverAddress) ]),
     new Pattern('FF'),
     undefined,
     replies,
-    replyStruct
+    replyFamily
 )
 
-const command = requestSet.createChildStruct(
+const command = requestSet.createChildFamily(undefined,
     new Pattern('01'),
     undefined,
     Packet.TYPES.TASK,
     [
-        requestSet.replyStruct.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.TYPES.ACK),
-        requestSet.replyStruct.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.TYPES.COMPLETION),
-        requestSet.replyStruct.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.TYPES.ERROR) 
+        requestSet.replyFamily.createChild('Ack', new Pattern('4Y', new Match('Y', socket)), undefined, Packet.TYPES.ACK),
+        requestSet.replyFamily.createChild('Completion', new Pattern('5Y', new Match('Y', socket)), undefined, Packet.TYPES.COMPLETION),
+        requestSet.replyFamily.createChild('Command not executable', new Pattern('6Y 41', new Match('Y', socket)), undefined, Packet.TYPES.ERROR) 
     ]
 )
 
 const power = command.createChild('Power', Pattern.concat(new Pattern('04 00'), Pattern.fromParameterGroup(powerMode)))
 
-const focus = command.createChildStruct(new Pattern('04'))
+const focus = command.createChildFamily('Focus', new Pattern('04'))
 const focus_stop = focus.createChild('Stop', new Pattern('08 00'), 'Enabled during Manual Focus Mode')
 const focus_farStandard = focus.createChild('Far (Standard)', new Pattern('08 02'), 'Enabled during Manual Focus Mode')
 const focus_nearStandard = focus.createChild('Near (Standard)', new Pattern('08 03'), 'Enabled during Manual Focus Mode')
