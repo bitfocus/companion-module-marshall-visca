@@ -1,1 +1,1 @@
-module.exports = require('./lib/MarshallController');
+module.exports = require('./lib/MarshallCamera');
