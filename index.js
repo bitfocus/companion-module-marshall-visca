@@ -77,8 +77,9 @@ class instance extends instance_skel {
                 options.push(option)
             }
             
-            actions[command.name] = {
-                label: command.name,
+            const fullName = command.familyName ? `${command.familyName} - ${command.name}` : command.name
+            actions[fullName] = {
+                label: fullName,
                 options: options,
                 callback: ((action, _) => {
                     this.camera.sendCommand(command, action.options)
