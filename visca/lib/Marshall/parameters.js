@@ -1,0 +1,22 @@
+const { Range, List } = require('../Parameters')
+const lut = require('./lookupTables')
+
+exports.addressParameter     = new Range('Address', 1, 7)
+exports.socket               = new Range('Socket', 1, lut.nSockets)
+
+exports.powerMode            = new List('Power Mode', Object.keys(lut.powerModeArray))
+exports.zoomAndFocusSpeed    = new Range('Speed', 0, 7, '0 (Low) to 7 (High)')
+exports.zoomPosition         = new Range('Zoom Position', 0x0000, 0x4000, `${0x0000} (Wide end) to ${0x4000} (Tele end)`)
+exports.zoomMemoryMode       = new List('Focus Mode', Object.keys(lut.defaultOnOffArray))
+exports.focusPosition        = new Range('Focus Position', 0x0000, 0x047A, `${0x0000} (Wide end) to ${0x4000} (Tele end)`)
+exports.focusMode            = new List('Focus Mode', Object.keys(lut.focusModeArray))
+exports.curveTracking        = new List('Curve Tracking', Object.keys(lut.curveTrackingArray))
+exports.autofocusSensitivty  = new List('Autofocus Sensitivity', Object.keys(lut.autofocusSensitivtyArray))
+exports.autofocusFrame       = new List('Autofocus Frame', Object.keys(lut.autofocusFrameArray))
+exports.resolution           = new List('Resolution', Object.keys(lut.resolutionArray))
+exports.hdmiOutputRange      = new List('HDMI Output Range', Object.keys(lut.hdmiOutputRangeArray))
+exports.whiteBalanceMode     = new List('White Balance Mode', Object.keys(lut.whiteBalanceModeArray))
+exports.whiteBalanceRedGain  = new Range('White Balance Red Gain', 0x00, 0x80, `${0x00} to ${0x80}`)
+exports.whiteBalanceBlueGain = new Range('White Balance Blue Gain', 0x00, 0x80, `${0x00} to ${0x80}`)
+
+exports.irisPosition         = new List('Iris Position', Object.keys(lut.irisPositionArray))

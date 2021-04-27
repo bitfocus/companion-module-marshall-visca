@@ -28,7 +28,7 @@ exports.byteArrayToUint = function (byteArray) {
  * @return {Uint8Array}      Return array of integers between 0 and 255.
  */
 exports.uintToByteArray = function (integer, length) {
-    let int_array = Array.from({length: length}, (_, i) => (integer >>> (8 * (length - i - 1))) % 256)
+    let int_array = Array.from({ length: length }, (_, ind) => (integer >>> (8 * (length - ind - 1))) % 256)
     return new Uint8Array(int_array)
 }
 
@@ -72,6 +72,13 @@ exports.byteArrayToHexArray = function (byteArray) {
     return byteArray.reduce((hexArray, byte) => hexArray.concat(exports.uintToHexArray(byte)), [])
 }
 
+exports.hexArrayToByteArray = function (hexArray) {
+    if (hexArray.length % 2 !== 0) {
+        hexArray.unshift(0)
+    }
+    return Array.from({ length: hexArray.length / 2 }, (_, ind) => 16 * hexArray[2 * ind] + hexArray[2 * ind + 1])
+}
+
 /**
  * Converts a array of bytes into a string of hexadezimal digits.
  * 
@@ -86,6 +93,11 @@ exports.byteArrayToHexArray = function (byteArray) {
 exports.byteArrayToHexString = function (byteArray, spacer=' ') {
     let hexArray = exports.byteArrayToHexArray(byteArray)
     return exports.hexArrayToHexString(hexArray, spacer)
+}
+
+exports.hexStringToByteArray = function (hexString) {
+    let hexArray = exports.hexStringToHexArray(hexString)
+    return exports.hexArrayToByteArray(hexArray)
 }
 
 /**
@@ -104,6 +116,11 @@ exports.hexArrayToHexString = function (hexArray, spacer=' ') {
     return hexCharArray.join('').match(/../g).join(spacer)
 }
 
+exports.hexStringToHexArray = function (hexString) {
+    let hexCharArray = hexString.replace(/\s+/g, '').split('')
+    return hexCharArray.map(hexChar => parseInt(hexChar, 16))
+}
+
 /**
  * Get the first key matching the given value in an object
  *  
@@ -113,6 +130,14 @@ exports.hexArrayToHexString = function (hexArray, spacer=' ') {
  */
 exports.getKeyByValue = function (object, value) {
     return Object.keys(object).find(key => object[key] === value)
+}
+
+exports.getObjectByKeyValuePair = function (array, key, value) {
+    return array.find(object => object[key] === value)
+}
+
+exports.itemArrayToValueArray = function (itemArray, key) {
+    return itemArray.map(item => item[key])
 }
 
 /**
@@ -243,20 +268,6 @@ exports.checkParameter = function (parameter, value) {
     }
 }
 
-exports.encodeParameters = function (markersSets, parameters) {
-    let markersDict = {}
-    for (let [markers, markersObject] of Object.entries(markersSets)) {
-        for (let parameterName in markersObject.parameters) {
-            exports.checkParameter(markersObject.parameters[parameterName], parameters[parameterName])
-        }
-        let markerValues = markersObject.encoder(parameters)
-        for (let ind in markers) {
-            markersDict[markers[ind]] = markerValues[ind]
-        }
-    }
-    return markersDict
-}
-
 exports.decodeMarkers = function (markersSets, markersDict, validatorArguments={}) {
     let parameters = {}
     for (let [markers, markersObject] of Object.entries(markersSets)) {
@@ -278,47 +289,4 @@ exports.decodeMarkers = function (markersSets, markersDict, validatorArguments={
         parameters = {...parameters, ...currentParameters}
     }
     return parameters
-}
-
-exports.decompressRequestSet = function (packet, parentPacket={}, packetName='root') {
-    concatSpaced = strings => strings.filter(Boolean).join(' ')
-
-    let packetCopy
-    if (typeof packet !== 'object') {
-        packetCopy = { core: String(packet) }
-    } else {
-        packetCopy = Object.assign({}, packet)
-    }
-    packetCopy.name = (parentPacket.name || []).concat(packetName)
-
-    for (const reply_type of ['answer', 'error']) {
-        if (!packet.hasOwnProperty(reply_type) && !parentPacket.hasOwnProperty(reply_type)) {
-            continue // This is also the case if a answer or error packet gets decompressed
-        }
-
-        let childReplyPacket = packet[reply_type] || {}
-        let parentReplyPacket = parentPacket[reply_type] || {}
-        packetCopy[reply_type] = exports.decompressRequestSet(childReplyPacket, parentReplyPacket, packetName)
-        packetCopy[reply_type].packets = Object.assign({}, parentReplyPacket.packets, childReplyPacket.packets)
-    }
-    
-    // Property 'pattern' is used if 'core' and 'pattern' are given
-    if (packetCopy.hasOwnProperty('pattern')) {
-        packetCopy.pattern = packet.pattern
-        packetCopy.markers = Object.assign({}, packet.markers)
-    } else {
-        packetCopy.rootPrefix = packetCopy.rootPrefix || concatSpaced([parentPacket.rootPrefix, packet.prefix])
-        packetCopy.rootPostfix = packetCopy.rootPostfix || concatSpaced([parentPacket.rootPostfix, packet.postfix])
-        packetCopy.markers = Object.assign({}, parentPacket.markers, packet.markers)
-        if (packetCopy.hasOwnProperty('core')) {
-            packetCopy.pattern = concatSpaced([packetCopy.rootPrefix, packetCopy.core, packetCopy.rootPostfix])
-        } else if (packet.hasOwnProperty('packets')) {
-            // Recursive algorithm
-            for (let [name, childPacket] of Object.entries(packet.packets)) {
-                packetCopy.packets[name] = exports.decompressRequestSet(childPacket, packetCopy, name)
-            }
-        }
-    } 
-
-    return packetCopy
 }

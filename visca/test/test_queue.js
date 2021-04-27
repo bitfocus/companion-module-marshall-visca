@@ -15,10 +15,10 @@ class Person {
 }
 
 // create a queue object with concurrency 2
-var q = async.queue(function(task, callback) {
-    console.log('Hello ' + task.name);
+var q = async.queue(function(request, callback) {
+    console.log('Hello ' + request.name);
     setTimeout(() => {
-        console.log('Bye ' + task.name);
+        console.log('Bye ' + request.name);
         callback();
     }, 1000);
 }, 1);
