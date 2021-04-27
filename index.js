@@ -1,5 +1,6 @@
 var instance_skel = require('../../instance_skel');
-var MarshallCamera = require('./visca/index');
+const MarshallCamera = require('./visca/lib/Marshall/MarshallCamera');
+const commands = require('./visca/lib/Marshall/commands')
 const { Range, List } = require('./visca/lib/Parameters');
 
 class instance extends instance_skel {
@@ -46,8 +47,7 @@ class instance extends instance_skel {
     initActions() {
         let actions = {}
 
-        let commandsArray = MarshallCamera.COMMANDS.list()
-        
+        let commandsArray = Object.values(commands)
 
         for (const command of commandsArray) {
             const pattern = command.pattern

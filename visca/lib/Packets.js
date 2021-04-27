@@ -6,14 +6,14 @@ class PacketFamily {
         this.type = type
     }
 
-    createChildFamily(name, prefix, postfix, type=this.type) {
+    newChildFamily(name, prefix, postfix, type=this.type) {
         const newPrefix = Pattern.concat(this.prefix, prefix)
         const newPostfix = Pattern.concat(postfix, this.postfix)
 
         return new PacketFamily(name, newPrefix, newPostfix, type)
     }
 
-    createChild(name, core, comment, type=this.type) {
+    newChild(name, core, comment, type=this.type) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
         return new Packet(name, this.name, type, pattern, comment)
@@ -28,18 +28,18 @@ class CommandFamily extends PacketFamily {
         this.replyFamily = replyFamily
     }
 
-    createChildFamily(name, prefix, postfix, type=this.type, replies=[], replyPrefix, replyPostfix) {
+    newChildFamily(name, prefix, postfix, type=this.type, replies=[], replyPrefix, replyPostfix) {
         const childPrefix = Pattern.concat(this.prefix, prefix)
         const childPostfix = Pattern.concat(postfix, this.postfix)
 
         const childReplies = [...this.replies, ...replies]
         
-        const childReplyFamily = this.replyFamily.createChildFamily(replyPrefix, replyPostfix)
+        const childReplyFamily = this.replyFamily.newChildFamily(replyPrefix, replyPostfix)
         
         return new CommandFamily(name, childPrefix, childPostfix, type, childReplies, childReplyFamily)
     }
 
-    createChild(name, core, comment, type=this.type, replies=[]) {
+    newChild(name, core, comment, type=this.type, replies=[]) {
         const pattern = Pattern.concat(this.prefix, core, this.postfix)
         
         const childReplies = [...this.replies, ...replies]

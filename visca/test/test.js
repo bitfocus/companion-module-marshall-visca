@@ -1,4 +1,5 @@
-const MarshallCamera = require('../lib/MarshallCamera')
+const MarshallCamera = require('../lib/Marshall/MarshallCamera')
+const commands = require('../lib/Marshall/commands')
 
 let ip = '192.168.102.34'
 // ip = '192.168.178.43';
@@ -13,7 +14,7 @@ let error = data => {
     return data
 }
 
-const powerCommand = MarshallCamera.COMMANDS.get(undefined, 'Power')
+const powerCommand = commands['power']
 camera.sendCommand(powerCommand, { 'Address': 1, 'Power Mode': 'Off (Standby)' }).completion.then(success).catch(error).then(() => {
     console.log('HI')
 })

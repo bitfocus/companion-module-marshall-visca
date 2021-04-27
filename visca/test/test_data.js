@@ -40,27 +40,27 @@ const powerModeArray = {
     'Off (Standby)': 0x03
 }
 
-const powerMode = new List('Power Mode', Object.keys(powerModeArray)).createParameterGroup(powerModeArray, 2)
-const irisPosition = new List('Iris Position', Object.keys(irisPositionArray)).createParameterGroup(irisPositionArray)
-const resolution = new List('Resolution', Object.keys(resolutionArray)).createParameterGroup(resolutionArray)
-const zoomAndFocusSpeed = new Range('Speed', 0, 7, '0 (Low) to 7 (High)').createParameterGroup()
-const zoomPosition = new Range('Zoom Position', 0x0000, 0x4000, `${0x0000} (Wide end) to ${0x4000} (Tele end)`).createParameterGroup()
-const focusPosition = new Range('Focus Position', 0x0000, 0x047A, `${0x0000} (Wide end) to ${0x4000} (Tele end)`).createParameterGroup(4)
+const powerMode = new List('Power Mode', Object.keys(powerModeArray)).newGroup(powerModeArray, 2)
+const irisPosition = new List('Iris Position', Object.keys(irisPositionArray)).newGroup(irisPositionArray)
+const resolution = new List('Resolution', Object.keys(resolutionArray)).newGroup(resolutionArray)
+const zoomAndFocusSpeed = new Range('Speed', 0, 7, '0 (Low) to 7 (High)').newGroup()
+const zoomPosition = new Range('Zoom Position', 0x0000, 0x4000, `${0x0000} (Wide end) to ${0x4000} (Tele end)`).newGroup()
+const focusPosition = new Range('Focus Position', 0x0000, 0x047A, `${0x0000} (Wide end) to ${0x4000} (Tele end)`).newGroup(4)
 const addressParameter = new Range('Address', 1, 7)
 const senderAddress = new ParameterGroup(addressParameter, {
     nHex: 1,
     encoder: parameterDict => [ parameterDict['Address'] + 8 ],
     decoder: hexArray => ({ 'Address': hexArray[0] - 8  })
 })
-const receiverAddress = addressParameter.createParameterGroup()
-const socket = new Range('Socket', 1, nSockets).createParameterGroup()
-const vendorID = new HexLiteral('Vendor ID', 4).createParameterGroup()
-const modelID = new HexLiteral('Model ID', 4).createParameterGroup()
-const romRevision = new HexLiteral('Rom revision', 4).createParameterGroup()
-const maximumSocket = new Range('Maximum Socket', 0x01, 0xFF).createParameterGroup()
-const camFWVersionType = new AsciiString('Firmware Version Type', 3).createParameterGroup()
-const camFWVersionBoot = new AsciiString('Firmware Version - Boot', 4).createParameterGroup()
-const ipAddressIPv4 = new IPv4('IP Address v4').createParameterGroup()
+const receiverAddress = addressParameter.newGroup()
+const socket = new Range('Socket', 1, nSockets).newGroup()
+const vendorID = new HexLiteral('Vendor ID', 4).newGroup()
+const modelID = new HexLiteral('Model ID', 4).newGroup()
+const romRevision = new HexLiteral('Rom revision', 4).newGroup()
+const maximumSocket = new Range('Maximum Socket', 0x01, 0xFF).newGroup()
+const camFWVersionType = new AsciiString('Firmware Version Type', 3).newGroup()
+const camFWVersionBoot = new AsciiString('Firmware Version - Boot', 4).newGroup()
+const ipAddressIPv4 = new IPv4('IP Address v4').newGroup()
 const memoryNumber = new ParameterGroup(new Range('Memory Number', 0, 255), {
     nHex: 3,
     encoder: parameterDict => {

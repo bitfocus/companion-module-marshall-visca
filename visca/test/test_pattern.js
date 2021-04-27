@@ -31,7 +31,7 @@ const resolutionArray = {
     'HD 720P(1280 x 720) - 25p':       0x12
 }
 
-const resolution = new List('Resolution', Object.keys(resolutionArray)).createParameterGroup(resolutionArray)
+const resolution = new List('Resolution', Object.keys(resolutionArray)).newGroup(resolutionArray)
 
 var p2 = new Pattern('8x x0 42', [new Match('xx', resolution)])
 

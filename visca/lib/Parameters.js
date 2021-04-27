@@ -11,7 +11,7 @@ class Parameter {
         throw Error('Function not implemented')
     }
 
-    createParameterGroup() {
+    newGroup() {
         const nHex = 1
         const encoder = () => Array(nHex)
         const decoder = () => ({ [this.name]: undefined })
@@ -36,7 +36,7 @@ class Range extends Parameter {
         return (value >= this.min && value <= this.max)
     }
 
-    createParameterGroup(nHex) {
+    newGroup(nHex) {
         // nHex ??= this.max.toString(16).length // Node 15.0
         if (nHex === undefined) {
             nHex = this.max.toString(16).length
@@ -69,7 +69,7 @@ class List extends Parameter {
         return this.itemNameArray.includes(value)
     }
 
-    createParameterGroup(itemDict, nHex) {
+    newGroup(itemDict, nHex) {
         // nHex ??= Math.max(Object.values(itemDict)).toString(16).length // Node 15.0
         if (nHex === undefined) {
             nHex = Math.max(...Object.values(itemDict)).toString(16).length
@@ -119,7 +119,7 @@ class HexLiteral extends Parameter {
         return hexArray.length === this.nHex && !hexArray.includes(NaN) && !byteArray.includes(0xFF)
     }
     
-    createParameterGroup(spacer='') {
+    newGroup(spacer='') {
         const nHex = this.nHex
         
         const encoder = parameterDict => {
@@ -149,7 +149,7 @@ class IPv4 extends Parameter {
         return oktetArray.length === 4 && oktetArray.every(oktet => oktet >= 0x00 && oktet <= 0xFF)
     }
     
-    createParameterGroup() {
+    newGroup() {
         const nHex = 4
         
         const encoder = parameterDict => {
@@ -184,7 +184,7 @@ class AsciiString extends Parameter {
         return value.length === this.nCharacters && /^[\x00-\x7F]*$/.test(value)
     }
     
-    createParameterGroup() {
+    newGroup() {
         const nHex = this.nCharacters
         
         const encoder = parameterDict => {
