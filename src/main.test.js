@@ -9,6 +9,8 @@ const INQUIRY_ANSWERS = {
 	'81090400ff': [0x90, 0x50, 0x02, 0xff],
 	'81090612ff': [0x90, 0x50, 0x0f, 0x0f, 0x0f, 0x0e, 0x00, 0x00, 0x01, 0x00, 0xff],
 	'81090002ff': [0x90, 0x50, 0x00, 0x01, 0x05, 0x13, 0x01, 0x04, 0x02, 0xff],
+	// Not executable, e.g. in standby
+	'81090447ff': [0x90, 0x60, 0x41, 0xff],
 }
 
 async function startFakeCamera() {
@@ -104,6 +106,7 @@ test('polls the status into variables and feedbacks', async () => {
 		// Unsupported inquiries are only sent once
 		const count = (inquiry) => received.filter((message) => message.endsWith(inquiry)).length
 		assert.strictEqual(count('81090438ff'), 1)
+		assert.ok(count('81090447ff') > 1, 'not executable inquiries are polled again')
 		assert.ok(count('81090400ff') > 1)
 	} finally {
 		await instance.destroy()

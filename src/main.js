@@ -18,6 +18,7 @@ const POLL_AFTER_COMMAND_DELAY = 300
 const DEFAULT_SPEED = { pan: 12, tilt: 10, zoom: 4 }
 
 const isTimeout = (reason) => reason instanceof Error && /Timeout|did not answer/.test(reason.message)
+const isUnsupported = (reason) => /^Syntax Error/.test(reason?.packet?.name ?? '')
 const reasonToMessage = (reason) =>
 	reason instanceof Error ? reason.message : (reason?.packet?.name ?? String(reason))
 
@@ -270,7 +271,8 @@ export default class MarshallViscaInstance extends InstanceBase {
 			if (isTimeout(reason)) {
 				// The power inquiry is the keepalive, other inquiries time out at the same time
 				if (key === 'power') this.connectionFailed(reasonToMessage(reason))
-			} else if (this.polledInquiries.delete(key)) {
+			} else if (isUnsupported(reason) && this.polledInquiries.delete(key)) {
+				// 'Command not executable' (e.g. in standby) is temporary, a syntax error is not
 				this.log(
 					'debug',
 					`Inquiry "${inquiries[key].name}" is not supported and no longer polled: ${reasonToMessage(reason)}`,
