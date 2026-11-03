@@ -33,7 +33,7 @@ Not every model supports every command or value. The camera answers unsupported 
 
 ### Variables
 
-Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, focus/white balance/AE mode, the last recalled preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
+Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, focus/white balance/AE mode, the last recalled or stored preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
 
 Values the camera does not report stay empty.
 
@@ -45,4 +45,4 @@ Values the camera does not report stay empty.
 
 ### Presets
 
-Pan/tilt arrows, zoom, speed up/down, recall and set of presets 0 to 15, power, focus.
+Pan/tilt arrows, zoom, speed up/down, power, focus and presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position.

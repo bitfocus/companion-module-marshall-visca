@@ -5,7 +5,7 @@ Stand: November 2026.
 ## Umgesetzt
 
 - Inquiries mit Variablen, Feedbacks und Keepalive (Status‑Polling, einstellbares Intervall)
-- Button‑Presets: Pan/Tilt, Zoom, Speed, Preset‑Recall/Set 0–15, Power, Fokus
+- Button‑Presets: Pan/Tilt, Zoom, Speed, Presets 0–15 (kurz drücken = abrufen, 2 s halten = speichern), Power, Fokus
 - Exposure: AE‑Modus, Iris (nutzt `irisPositionArray`), Shutter, Gain, Bright, Belichtungskorrektur, Backlight, WDR
 - Pan/Tilt: absolute und relative Position, Limits, Geschwindigkeit im Modul mit Speed‑Up/Down
 - Bild: Aperture (Schärfe), Color Gain (Sättigung), Gamma, Rauschunterdrückung, Flip, Mirror, Defog, Picture Freeze
@@ -22,8 +22,9 @@ Stand: November 2026.
 ### Priorität hoch
 
 1. **An Hardware verifizieren (CV612, CV630, CV730).** Alle Befehle nutzen Standard‑VISCA‑Codes nach der Sony‑Referenz, Marshall dokumentiert sie nicht öffentlich. Zu prüfen:
-   - Wertebereiche: Pan‑Speed 1–24, Tilt‑Speed 1–20, Presets 0–127, Shutter/Gain/Bright/Gamma
-   - Pan/Tilt‑Positionsbereich und ‑Richtung
+   - ✅ Pan/Tilt‑Steuerung an echter Kamera bestätigt (November 2026)
+   - Wertebereiche: Presets 0–127, Shutter/Gain/Bright/Gamma
+   - Pan/Tilt‑Positionsbereich für absolute/relative Positionen und Limits
    - Codes für Bild, Exposure, Menü und Tally
    - Der Befehl `Zoom - Memory Mode` (`81 01 04 47 00 0p FF`) überschneidet sich mit `Zoom - Direct` und ist vermutlich falsch.
 2. **Preset‑Recall‑Geschwindigkeit.** Es gibt keinen dokumentierten Marshall‑Befehl. Sony nutzt `81 01 7E 01 0B pp FF`; das lässt sich bis zur Klärung über „Custom VISCA Command“ testen.
