@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert'
-import { Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup } from '../lib/Parameters.js'
+import { Range, SignedRange, List, HexLiteral, IPv4, AsciiString, ParameterGroup } from '../lib/Parameters.js'
 import * as utils from '../lib/utils.js'
 import * as lut from '../lib/Marshall/lookupTables.js'
 
@@ -47,6 +47,8 @@ const cases = [
 		{ 'IP Address v4': '192.168.102.33' },
 		[0xc, 0x0, 0xa, 0x8, 0x6, 0x6, 0x2, 0x1],
 	],
+	[new SignedRange('Pan Position', -0x8000, 0x7fff).newGroup(), { 'Pan Position': -2 }, [0xf, 0xf, 0xf, 0xe]],
+	[new SignedRange('Tilt Position', -0x8000, 0x7fff).newGroup(), { 'Tilt Position': 0x0123 }, [0x0, 0x1, 0x2, 0x3]],
 	[memoryNumber, { 'Memory Number': 139 }, [0x1, 0x0, 0xb]],
 ]
 

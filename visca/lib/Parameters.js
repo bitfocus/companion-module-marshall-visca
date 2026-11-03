@@ -58,6 +58,27 @@ class Range extends Parameter {
 	}
 }
 
+/**
+ * Signed integer, encoded as two's complement with nHex hexadecimal digits.
+ */
+class SignedRange extends Range {
+	newGroup(nHex = 4) {
+		const modulus = 16 ** nHex
+
+		const encoder = (parameterDict) => {
+			const value = parameterDict[this.name]
+			return utils.uintToHexArray(value < 0 ? value + modulus : value, nHex)
+		}
+
+		const decoder = (hexArray) => {
+			const value = utils.hexArrayToUint(hexArray)
+			return { [this.name]: value >= modulus / 2 ? value - modulus : value }
+		}
+
+		return new ParameterGroup(this, { nHex, encoder, decoder })
+	}
+}
+
 class List extends Parameter {
 	constructor(name, itemNameArray, comment) {
 		super(name, comment)
@@ -269,4 +290,4 @@ class ParameterGroup {
 	}
 }
 
-export { Parameter, Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup }
+export { Parameter, Range, SignedRange, List, HexLiteral, IPv4, AsciiString, ParameterGroup }
