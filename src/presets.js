@@ -172,5 +172,156 @@ export function getPresetDefinitions(label) {
 		focus_one_push: press('One Push Focus', 'ONE PUSH\nFOCUS', [action('focus_one_push_trigger')]),
 	})
 
+	const variable = (id) => `$(${label}:${id})`
+	/**
+	 * Mode buttons, green while the mode is active
+	 *
+	 * @param {string} prefix  Prefix of the preset ids
+	 * @param {string} actionId
+	 * @param {string} optionId
+	 * @param {string} feedbackId
+	 * @param {[string, string][]} modes  Mode and button text
+	 */
+	const modeButtons = (prefix, actionId, optionId, feedbackId, modes) =>
+		Object.fromEntries(
+			modes.map(([mode, text]) => [
+				`${prefix}_${mode.toLowerCase().replace(/ /g, '_')}`,
+				press(
+					mode,
+					text,
+					[action(actionId, { [optionId]: mode })],
+					[{ feedbackId, options: { mode }, style: { bgcolor: green } }],
+				),
+			]),
+		)
+	/**
+	 * Up and down buttons that show the current value
+	 *
+	 * @param {string} id  Prefix of the preset ids
+	 * @param {string} text  Button text
+	 * @param {string} variableId  Variable with the current value
+	 * @param {any[]} upActions
+	 * @param {any[]} downActions
+	 */
+	const upDownButtons = (id, text, variableId, upActions, downActions) => ({
+		[`${id}_up`]: press(`${text} +`, `${text} +\n${variable(variableId)}`, upActions),
+		[`${id}_down`]: press(`${text} -`, `${text} -\n${variable(variableId)}`, downActions),
+	})
+	/**
+	 * On and off buttons of a setting, green while it is on
+	 *
+	 * @param {string} id  Prefix of the preset ids, also the variable of the setting
+	 * @param {string} text  Button text
+	 * @param {string} actionId
+	 * @param {boolean} [withFeedback]  Only for settings the camera reports (see the setting_on feedback)
+	 */
+	const onOffButtons = (id, text, actionId, withFeedback = true) => ({
+		[`${id}_on`]: press(
+			`${text} On`,
+			`${text}\nON`,
+			[action(actionId, { state: 'On' })],
+			withFeedback ? [{ feedbackId: 'setting_on', options: { setting: id }, style: { bgcolor: green } }] : [],
+		),
+		[`${id}_off`]: press(`${text} Off`, `${text}\nOFF`, [action(actionId, { state: 'Off' })]),
+	})
+
+	addSection(
+		'exposure',
+		'Exposure / Iris',
+		'AE mode and exposure values. Iris, shutter and gain can only be changed in the matching AE mode (e.g. Manual or Iris Priority).',
+		{
+			...modeButtons('ae_mode', 'exposure_mode', 'ae_mode', 'ae_mode', [
+				['Full Auto', 'AE\nAUTO'],
+				['Manual', 'AE\nMANUAL'],
+				['Iris Priority', 'AE\nIRIS PRIO'],
+				['Shutter Priority', 'AE\nSHUTTER PRIO'],
+				['Bright', 'AE\nBRIGHT'],
+			]),
+			...upDownButtons('iris', 'IRIS', 'iris', [action('exposure_iris_up')], [action('exposure_iris_down')]),
+			...upDownButtons(
+				'shutter',
+				'SHUTTER',
+				'shutter_position',
+				[action('exposure_shutter_up')],
+				[action('exposure_shutter_down')],
+			),
+			...upDownButtons('gain', 'GAIN', 'gain_position', [action('exposure_gain_up')], [action('exposure_gain_down')]),
+			...upDownButtons(
+				'bright',
+				'BRIGHT',
+				'bright_position',
+				[action('exposure_bright_up')],
+				[action('exposure_bright_down')],
+			),
+			...onOffButtons('exposure_compensation', 'EXP COMP', 'exposure_compensation'),
+			...upDownButtons(
+				'exposure_compensation',
+				'EXP COMP',
+				'exposure_compensation_position',
+				[action('exposure_compensation_up')],
+				[action('exposure_compensation_down')],
+			),
+			...onOffButtons('backlight', 'BACKLIGHT', 'exposure_backlight'),
+			...onOffButtons('wdr', 'WDR', 'exposure_wdr'),
+		},
+	)
+
+	addSection(
+		'color',
+		'Color / White Balance',
+		'White balance mode, red/blue gain (only in Manual mode), color gain (saturation) and hue',
+		{
+			...modeButtons('white_balance', 'white_balance_mode', 'white_balance_mode', 'white_balance_mode', [
+				['Auto', 'WB\nAUTO'],
+				['Indoor', 'WB\nINDOOR'],
+				['Outdoor', 'WB\nOUTDOOR'],
+				['One Push', 'WB\nONE PUSH'],
+				['Manual', 'WB\nMANUAL'],
+			]),
+			white_balance_one_push_trigger: press('One Push Trigger', 'WB\nTRIGGER', [
+				action('white_balance_one_push_trigger'),
+			]),
+			...upDownButtons(
+				'red_gain',
+				'RED',
+				'red_gain',
+				[action('white_balance_red_gain_up')],
+				[action('white_balance_red_gain_down')],
+			),
+			...upDownButtons(
+				'blue_gain',
+				'BLUE',
+				'blue_gain',
+				[action('white_balance_blue_gain_up')],
+				[action('white_balance_blue_gain_down')],
+			),
+			...upDownButtons(
+				'color_gain',
+				'COLOR',
+				'color_gain',
+				[action('image_adjust', { setting: 'color_gain', step: 1 })],
+				[action('image_adjust', { setting: 'color_gain', step: -1 })],
+			),
+			...upDownButtons(
+				'hue',
+				'HUE',
+				'hue',
+				[action('image_adjust', { setting: 'hue', step: 1 })],
+				[action('image_adjust', { setting: 'hue', step: -1 })],
+			),
+		},
+	)
+
+	addSection('image', 'Image', undefined, {
+		...upDownButtons(
+			'aperture',
+			'SHARPNESS',
+			'aperture',
+			[action('image_aperture_up')],
+			[action('image_aperture_down')],
+		),
+		...onOffButtons('freeze', 'FREEZE', 'image_freeze', false),
+	})
+
 	return { structure, presets }
 }
