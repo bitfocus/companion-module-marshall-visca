@@ -40,7 +40,7 @@ export function getFeedbackDefinitions(state) {
 		preset_active: {
 			type: 'boolean',
 			name: 'Preset was recalled last',
-			description: 'Active until the camera is moved manually or another preset is recalled',
+			description: 'Active after recalling or storing the preset, until the camera is moved manually',
 			defaultStyle: activeStyle,
 			options: [{ type: 'number', id: 'preset', label: 'Preset', min: 0, max: 127, default: 0, asInteger: true }],
 			callback: ({ options }) => state.last_preset !== '' && state.last_preset === Number(options.preset),

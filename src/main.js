@@ -331,7 +331,7 @@ export default class MarshallViscaInstance extends InstanceBase {
 			() => {
 				if (camera !== this.camera) return
 				this.updateStatus(InstanceStatus.Ok)
-				if (command === commands['preset/recall']) {
+				if (command === commands['preset/recall'] || command === commands['preset/set']) {
 					this.updateState({ last_preset: parameterDict['Preset'] })
 				}
 				this.pollSoon()

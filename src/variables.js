@@ -12,7 +12,7 @@ export const VariableDefinitions = {
 	bright_position: { name: 'Bright position' },
 	pan_position: { name: 'Pan position' },
 	tilt_position: { name: 'Tilt position' },
-	last_preset: { name: 'Last recalled preset (empty after a manual move)' },
+	last_preset: { name: 'Last recalled or stored preset (empty after a manual move)' },
 	vendor_id: { name: 'Vendor ID' },
 	model_id: { name: 'Model ID' },
 	rom_version: { name: 'ROM version' },
