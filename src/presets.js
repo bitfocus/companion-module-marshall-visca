@@ -84,14 +84,53 @@ const presetButton = (preset) => ({
 })
 
 /**
+ * @param {{ options: { id: string, default?: any }[] } | false | undefined} definition
+ * @returns {Record<string, any>}
+ */
+const defaultOptions = (definition) =>
+	Object.fromEntries(
+		(definition ? definition.options : [])
+			.filter((option) => option.default !== undefined)
+			.map((option) => [option.id, option.default]),
+	)
+
+/**
+ * Adds the default value of every option a preset does not set. Companion skips actions and
+ * feedbacks with missing option values, e.g. the camera option.
+ *
+ * @param {import('@companion-module/base').CompanionPresetDefinitions} presets
+ * @param {import('@companion-module/base').CompanionActionDefinitions} actions
+ * @param {import('@companion-module/base').CompanionFeedbackDefinitions} feedbacks
+ */
+function fillDefaults(presets, actions, feedbacks) {
+	for (const preset of Object.values(presets)) {
+		if (!preset || preset.type !== 'simple') continue
+		for (const step of preset.steps) {
+			// Action sets are arrays (down, up) or { options, actions } for hold durations
+			for (const set of Object.values(step)) {
+				for (const entry of Array.isArray(set) ? set : (set?.actions ?? [])) {
+					entry.options = { ...defaultOptions(actions[entry.actionId]), ...entry.options }
+				}
+			}
+		}
+		for (const entry of preset.feedbacks) {
+			entry.options = { ...defaultOptions(feedbacks[entry.feedbackId]), ...entry.options }
+		}
+	}
+}
+
+/**
  * @param {string} label  Label of the connection, used to show variables on the buttons.
- * @param {{ number: number }[]} [cameras]  Configured cameras, for the camera selection buttons
+ * @param {{ number: number }[]} cameras  Configured cameras, for the camera selection buttons
+ * @param {object} definitions  Definitions the presets use, to fill in option defaults
+ * @param {import('@companion-module/base').CompanionActionDefinitions} definitions.actions
+ * @param {import('@companion-module/base').CompanionFeedbackDefinitions} definitions.feedbacks
  * @returns {{
  *   structure: import('@companion-module/base').CompanionPresetSection[],
  *   presets: import('@companion-module/base').CompanionPresetDefinitions,
  * }}
  */
-export function getPresetDefinitions(label, cameras = []) {
+export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 	/** @type {import('@companion-module/base').CompanionPresetDefinitions} */
 	const presets = {}
 	/** @type {import('@companion-module/base').CompanionPresetSection[]} */
@@ -351,5 +390,6 @@ export function getPresetDefinitions(label, cameras = []) {
 		...onOffButtons('freeze', 'FREEZE', 'image_freeze', false),
 	})
 
+	fillDefaults(presets, actions, feedbacks)
 	return { structure, presets }
 }

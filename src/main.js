@@ -38,12 +38,15 @@ export default class MarshallViscaInstance extends InstanceBase {
 	cameras = []
 	/** Number of the camera that actions without explicit camera control */
 	selectedCamera = 1
+	/** @type {import('@companion-module/base').CompanionFeedbackDefinitions} */
+	feedbackDefinitions = {}
 	/** @type {import('./models.js').Model} Limits the values offered in actions */
 	model = getModel(undefined)
 
 	async init(config) {
 		this.speed = { ...DEFAULT_SPEED }
-		this.setFeedbackDefinitions(getFeedbackDefinitions(this))
+		this.feedbackDefinitions = getFeedbackDefinitions(this)
+		this.setFeedbackDefinitions(this.feedbackDefinitions)
 		await this.configUpdated(config)
 	}
 
@@ -84,9 +87,13 @@ export default class MarshallViscaInstance extends InstanceBase {
 		}
 
 		this.model = combineModels(this.cameras.map((camera) => camera.model))
-		this.setActionDefinitions(getActionDefinitions(this))
+		const actionDefinitions = getActionDefinitions(this)
+		this.setActionDefinitions(actionDefinitions)
 		this.setVariableDefinitions(getVariableDefinitions(this.cameras.map((camera) => camera.number)))
-		const { structure, presets } = getPresetDefinitions(this.label, this.cameras)
+		const { structure, presets } = getPresetDefinitions(this.label, this.cameras, {
+			actions: actionDefinitions,
+			feedbacks: this.feedbackDefinitions,
+		})
 		this.setPresetDefinitions(structure, presets)
 
 		this.setSpeed(this.speed)

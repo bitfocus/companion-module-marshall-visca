@@ -4,25 +4,40 @@ import { getActionDefinitions } from './actions.js'
 import { getFeedbackDefinitions } from './feedbacks.js'
 import { getPresetDefinitions } from './presets.js'
 
-test('presets only use existing actions, feedbacks and options', () => {
-	const actions = getActionDefinitions(/** @type {any} */ ({ speed: {} }))
-	const feedbacks = getFeedbackDefinitions({})
-	const { structure, presets } = getPresetDefinitions('cam', [{ number: 1 }, { number: 3 }])
+const definitions = {
+	actions: getActionDefinitions(/** @type {any} */ ({ speed: {} })),
+	feedbacks: getFeedbackDefinitions(/** @type {any} */ ({})),
+}
 
+test('presets only use existing actions, feedbacks and options', () => {
+	const { actions, feedbacks } = definitions
+	const { structure, presets } = getPresetDefinitions('cam', [{ number: 1 }, { number: 3 }], definitions)
+
+	// Companion skips actions and feedbacks with missing or invalid option values
 	const checkOptions = (definition, options, name) => {
-		for (const [id, value] of Object.entries(options)) {
-			const option = definition.options.find((o) => o.id === id)
-			assert.ok(option, `${name}: unknown option ${id}`)
+		for (const id of Object.keys(options)) {
+			assert.ok(
+				definition.options.some((o) => o.id === id),
+				`${name}: unknown option ${id}`,
+			)
+		}
+		for (const option of definition.options) {
+			const value = options[option.id]
+			assert.notStrictEqual(value, undefined, `${name}: option ${option.id} is missing`)
 			if (option.type === 'dropdown') {
 				assert.ok(
 					option.choices.some((choice) => choice.id === value),
-					`${name}: invalid value ${value}`,
+					`${name}: invalid value ${value} of ${option.id}`,
 				)
+			}
+			if (option.type === 'number') {
+				assert.ok(value >= option.min && value <= option.max, `${name}: ${option.id} ${value} out of range`)
 			}
 		}
 	}
 
 	for (const [presetId, preset] of Object.entries(presets)) {
+		assert.strictEqual(preset.type, 'simple')
 		for (const step of preset.steps) {
 			// Action sets are arrays (down, up) or { options, actions } for hold durations
 			const entries = Object.values(step).flatMap((set) => (Array.isArray(set) ? set : set.actions))
@@ -41,15 +56,18 @@ test('presets only use existing actions, feedbacks and options', () => {
 	assert.deepStrictEqual(new Set(referenced), new Set(Object.keys(presets)))
 	assert.match(presets.speed_up.style.text, /\$\(cam:pan_speed\)/)
 	assert.match(presets.camera_select_3.style.text, /\$\(cam:cam3_name\)/)
-	assert.ok(!getPresetDefinitions('cam', [{ number: 1 }]).presets.camera_select_1, 'no selection for one camera')
+	assert.ok(
+		!getPresetDefinitions('cam', [{ number: 1 }], definitions).presets.camera_select_1,
+		'no selection for one camera',
+	)
 })
 
 test('preset buttons recall on short press and store when held', () => {
-	const [step] = getPresetDefinitions('cam').presets.preset_3.steps
+	const [step] = getPresetDefinitions('cam', [], definitions).presets.preset_3.steps
 	assert.deepStrictEqual(step.down, [])
-	assert.deepStrictEqual(step.up, [{ actionId: 'preset_recall', options: { preset: 3 } }])
+	assert.deepStrictEqual(step.up, [{ actionId: 'preset_recall', options: { preset: 3, camera: 0 } }])
 	assert.deepStrictEqual(step[2000], {
 		options: { runWhileHeld: true },
-		actions: [{ actionId: 'preset_set', options: { preset: 3 } }],
+		actions: [{ actionId: 'preset_set', options: { preset: 3, camera: 0 } }],
 	})
 })
