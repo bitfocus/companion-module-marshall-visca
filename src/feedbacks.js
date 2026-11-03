@@ -25,6 +25,15 @@ function modeFeedback(state, name, variableId, lookupTable) {
 }
 
 /**
+ * On/off settings, the id is the variable id.
+ */
+const OnOffSettings = [
+	{ id: 'backlight', label: 'Backlight compensation' },
+	{ id: 'wdr', label: 'Wide dynamic range' },
+	{ id: 'exposure_compensation', label: 'Exposure compensation' },
+]
+
+/**
  * @param {Record<string, unknown>} state  Current variable values of the instance.
  * @returns {import('@companion-module/base').CompanionFeedbackDefinitions}
  */
@@ -48,6 +57,21 @@ export function getFeedbackDefinitions(state) {
 		focus_mode: modeFeedback(state, 'Focus mode', 'focus_mode', lut.focusModeArray),
 		white_balance_mode: modeFeedback(state, 'White balance mode', 'white_balance_mode', lut.whiteBalanceModeArray),
 		ae_mode: modeFeedback(state, 'AE mode', 'ae_mode', lut.aeModeArray),
+		setting_on: {
+			type: 'boolean',
+			name: 'Setting is on',
+			defaultStyle: activeStyle,
+			options: [
+				{
+					type: 'dropdown',
+					id: 'setting',
+					label: 'Setting',
+					choices: OnOffSettings,
+					default: OnOffSettings[0].id,
+				},
+			],
+			callback: ({ options }) => state[String(options.setting)] === 'On',
+		},
 	}
 }
 
@@ -62,4 +86,7 @@ export const FeedbacksByVariable = {
 	focus_mode: ['focus_mode'],
 	white_balance_mode: ['white_balance_mode'],
 	ae_mode: ['ae_mode'],
+	backlight: ['setting_on'],
+	wdr: ['setting_on'],
+	exposure_compensation: ['setting_on'],
 }

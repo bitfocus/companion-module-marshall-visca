@@ -9,6 +9,8 @@ const INQUIRY_ANSWERS = {
 	'81090400ff': [0x90, 0x50, 0x02, 0xff],
 	'81090612ff': [0x90, 0x50, 0x0f, 0x0f, 0x0f, 0x0e, 0x00, 0x00, 0x01, 0x00, 0xff],
 	'81090002ff': [0x90, 0x50, 0x00, 0x01, 0x05, 0x13, 0x01, 0x04, 0x02, 0xff],
+	'8109044bff': [0x90, 0x50, 0x00, 0x00, 0x00, 0x09, 0xff],
+	'81090433ff': [0x90, 0x50, 0x02, 0xff],
 	// Undocumented value reported by a Marshall camera
 	'81090438ff': [0x90, 0x50, 0x04, 0xff],
 	// Not executable, e.g. in standby
@@ -121,6 +123,11 @@ test('polls the status into variables and feedbacks', async () => {
 		assert.strictEqual(host.feedbacks.power_on.callback({ options: {} }), true)
 
 		assert.strictEqual(host.variables.focus_mode, 'Unknown (0x04)')
+		assert.strictEqual(host.variables.iris_position, 9)
+		assert.strictEqual(host.variables.iris, 'F3.8')
+		assert.strictEqual(host.variables.backlight, 'On')
+		assert.strictEqual(host.feedbacks.setting_on.callback({ options: { setting: 'backlight' } }), true)
+		assert.strictEqual(host.feedbacks.setting_on.callback({ options: { setting: 'wdr' } }), false)
 
 		// Unsupported inquiries are only sent once
 		const count = (inquiry) => received.filter((message) => message.endsWith(inquiry)).length
