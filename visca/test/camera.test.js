@@ -147,3 +147,22 @@ test('fails an inquiry with an unknown answer right away', async () => {
 		server.close()
 	}
 })
+
+test('commands go ahead of queued inquiries', async () => {
+	const { server, received, port } = await startFakeCamera({ answerPayload: [0x90, 0x50, 0x02, 0xff] })
+	const camera = new MarshallCamera('127.0.0.1', { port })
+	try {
+		await camera.connect()
+		const requests = [1, 2, 3, 4].map(() => camera.sendInquiry(inquiries['power']))
+		requests.push(camera.sendCommand(commands['zoom/stop'], {}))
+		await Promise.all(requests.map((request) => request.completion))
+		// 2 inquiries are already in flight, the command is sent next
+		assert.deepStrictEqual(
+			received.slice(1).map((message) => message[1]),
+			[0x10, 0x10, 0x00, 0x10, 0x10],
+		)
+	} finally {
+		camera.close()
+		server.close()
+	}
+})

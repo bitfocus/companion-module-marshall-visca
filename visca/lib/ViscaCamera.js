@@ -22,7 +22,13 @@ class ViscaCamera extends EventEmitter {
 	}
 
 	_queueRequest(request) {
-		this._queue.push(request)
+		if (request instanceof ActionRequest) {
+			// Commands are triggered by the user and go ahead of queued inquiries (e.g. from polling)
+			const idx = this._queue.findIndex((queuedRequest) => queuedRequest instanceof InquiryRequest)
+			this._queue.splice(idx === -1 ? this._queue.length : idx, 0, request)
+		} else {
+			this._queue.push(request)
+		}
 		this._processQueue()
 	}
 
