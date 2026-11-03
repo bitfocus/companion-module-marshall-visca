@@ -333,6 +333,7 @@ commands['image/colorGain'] = image.newChild(
 	'Color Gain',
 	new Pattern('49 00 00 00 0p', new Match('p', par.colorGain.newGroup(1))),
 )
+commands['image/hue'] = image.newChild('Hue', new Pattern('4F 00 00 00 0p', new Match('p', par.hue.newGroup(1))))
 commands['image/gamma'] = image.newChild('Gamma', new Pattern('5B 0p', new Match('p', par.gamma.newGroup(1))))
 commands['image/noiseReduction'] = image.newChild(
 	'Noise Reduction',
@@ -459,6 +460,27 @@ for (const [key, name, core] of [
 	['brightPosition', 'Bright Position', '04 4D'],
 ]) {
 	addInquiry(key, name, core, new Pattern('00 00 0p 0q', new Match('pq', par.positionAnswer.newGroup(2))))
+}
+for (const [key, name, core] of [
+	['redGain', 'Red Gain', '04 43'],
+	['blueGain', 'Blue Gain', '04 44'],
+	['aperture', 'Aperture', '04 42'],
+	['exposureCompensationPosition', 'Exposure Compensation Position', '04 4E'],
+]) {
+	addInquiry(key, name, core, new Pattern('00 00 0p 0q', new Match('pq', par.positionAnswer.newGroup(2))))
+}
+for (const [key, name, core] of [
+	['colorGain', 'Color Gain', '04 49'],
+	['hue', 'Hue', '04 4F'],
+]) {
+	addInquiry(key, name, core, new Pattern('00 00 00 0p', new Match('p', par.levelAnswer.newGroup(1))))
+}
+for (const [key, name, core] of [
+	['backlight', 'Backlight Compensation', '04 33'],
+	['wdr', 'Wide Dynamic Range', '04 3D'],
+	['exposureCompensation', 'Exposure Compensation', '04 3E'],
+]) {
+	addInquiry(key, name, core, Pattern.fromParameterGroup(answerGroup(par.onOff, lut.defaultOnOffArray)))
 }
 addInquiry(
 	'panTiltPosition',
