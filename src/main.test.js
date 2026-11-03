@@ -47,6 +47,7 @@ function createInstance() {
 		setActionDefinitions: (actions) => (host.actions = actions),
 		setFeedbackDefinitions: (feedbacks) => (host.feedbacks = feedbacks),
 		setVariableDefinitions: () => {},
+		setPresetDefinitions: (structure, presets) => Object.assign(host, { structure, presets }),
 		setVariableValues: (values) => Object.assign(host.variables, values),
 		checkFeedbacks: (ids) => ids.forEach((id) => host.checkedFeedbacks.add(id)),
 		updateStatus: (status, message) => host.statuses.push([status, message]),

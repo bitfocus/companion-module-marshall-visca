@@ -5,6 +5,7 @@ import MarshallCamera, { Protocols } from '../visca/lib/Marshall/MarshallCamera.
 import commands, { inquiries } from '../visca/lib/Marshall/commands.js'
 import { getActionDefinitions } from './actions.js'
 import { getModel, Models } from './models.js'
+import { getPresetDefinitions } from './presets.js'
 import { FeedbacksByVariable, getFeedbackDefinitions } from './feedbacks.js'
 import { InquiryVariables, PolledInquiries, SpeedVariableDefinitions, VariableDefinitions } from './variables.js'
 import { UpgradeScripts } from './upgrades.js'
@@ -29,6 +30,8 @@ export default class MarshallViscaInstance extends InstanceBase {
 		this.setActionDefinitions(getActionDefinitions(this))
 		this.setFeedbackDefinitions(getFeedbackDefinitions(this.state))
 		this.setVariableDefinitions({ ...VariableDefinitions, ...SpeedVariableDefinitions })
+		const { structure, presets } = getPresetDefinitions(this.label)
+		this.setPresetDefinitions(structure, presets)
 		this.setVariableValues(this.state)
 		this.setSpeed(this.speed)
 
