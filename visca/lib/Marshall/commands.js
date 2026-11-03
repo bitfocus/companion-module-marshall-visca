@@ -1,4 +1,4 @@
-import { CommandFamily, PacketFamily, Packet, Pattern, Match } from '../Packets.js'
+import { Command, CommandFamily, PacketFamily, Packet, Pattern, Match } from '../Packets.js'
 import { ParameterGroup } from '../Parameters.js'
 
 import * as lut from './lookupTables.js'
@@ -383,6 +383,23 @@ commands['menu/off'] = menu.newChild('Off', new Pattern('03'))
 commands['menu/toggle'] = menu.newChild('Toggle', new Pattern('10'), 'Navigate with Pan Tilt - Drive')
 
 addOnOff(tasks, 'tally', 'Tally', '7E 01 0A 00', 'Sony compatible tally lamp, not available on every model')
+
+/**
+ * Creates a command from a hex string like '81 01 04 07 02 FF', for commands that are not defined here.
+ * Only commands (8x 01 ...) are supported, as the answer of an inquiry cannot be parsed without its definition.
+ *
+ * @throws If the hex string is not a valid VISCA command.
+ */
+export function createCustomCommand(hexString) {
+	const hex = hexString.replace(/\s+/g, '').toUpperCase()
+	if (!/^([0-9A-F]{2})+$/.test(hex)) {
+		throw new Error('The command must consist of pairs of hexadecimal digits')
+	}
+	if (!/^8[1-7]01([0-9A-F]{2})*FF$/.test(hex) || hex.match(/../g).slice(0, -1).includes('FF')) {
+		throw new Error('The command must start with 8x 01 and end with FF (and must not contain FF otherwise)')
+	}
+	return new Command('Custom Command', undefined, Packet.TYPES.TASK, new Pattern(hex), hexString, tasks.replies)
+}
 
 /**
  * Inquiries, answered with '90 50 ... FF'

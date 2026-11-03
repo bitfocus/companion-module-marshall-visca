@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert'
 import { Match, Pattern } from '../lib/Packets.js'
 import { Range, ParameterGroup } from '../lib/Parameters.js'
-import commands, { inquiries } from '../lib/Marshall/commands.js'
+import commands, { createCustomCommand, inquiries } from '../lib/Marshall/commands.js'
 
 const senderAddress = new ParameterGroup(new Range('Address', 1, 7), {
 	nHex: 1,
@@ -123,3 +123,14 @@ for (const [key, request, reply, parameterDict] of answers) {
 		assert.deepStrictEqual(answer.pattern.readPayload(bytes(reply)), { Address: 1, ...parameterDict })
 	})
 }
+
+test('custom commands are validated and keep their bytes', () => {
+	const command = createCustomCommand('81 01 04 07 02 ff')
+	assert.strictEqual(hex(command.pattern.writePayload({ Address: 1 })), '81 01 04 07 02 FF')
+	assert.ok(command.replies.some((reply) => reply.name === 'Completion'))
+	assert.doesNotThrow(() => createCustomCommand('81 01 04 0F F0 FF'))
+	assert.throws(() => createCustomCommand('81 09 04 00 FF'), /8x 01/)
+	assert.throws(() => createCustomCommand('81 01 04 FF 02 FF'), /8x 01/)
+	assert.throws(() => createCustomCommand('81 01 0'), /pairs/)
+	assert.throws(() => createCustomCommand('hello'), /pairs/)
+})
