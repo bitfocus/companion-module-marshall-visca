@@ -5,6 +5,7 @@ import { MAX_CAMERAS } from './camera-option.js'
 const white = combineRgb(255, 255, 255)
 const black = combineRgb(0, 0, 0)
 const green = combineRgb(0, 153, 0)
+const yellow = combineRgb(255, 204, 0)
 
 /**
  * @param {string} text
@@ -80,8 +81,12 @@ const presetButton = (preset) => ({
 			},
 		},
 	],
-	feedbacks: [{ feedbackId: 'preset_active', options: { preset }, style: { bgcolor: green } }],
-	notes: `Short press: recall preset ${preset}. Hold ${PRESET_SAVE_HOLD_TIME / 1000} s: store the current position as preset ${preset}.`,
+	feedbacks: [
+		{ feedbackId: 'preset_active', options: { preset }, style: { bgcolor: green } },
+		// Last, so that the flash wins over green
+		{ feedbackId: 'preset_stored', options: { preset }, style: { bgcolor: yellow, color: black } },
+	],
+	notes: `Short press: recall preset ${preset}. Hold ${PRESET_SAVE_HOLD_TIME / 1000} s: store the current position as preset ${preset}, the button flashes yellow when the camera confirmed it.`,
 })
 
 /**

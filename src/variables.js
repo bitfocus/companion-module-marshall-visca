@@ -26,6 +26,7 @@ export const VariableDefinitions = {
 	pan_position: { name: 'Pan position' },
 	tilt_position: { name: 'Tilt position' },
 	last_preset: { name: 'Last recalled or stored preset (empty after a manual move)' },
+	stored_preset: { name: 'Preset that was just stored (empty again after 1 s)' },
 	vendor_id: { name: 'Vendor ID' },
 	model_id: { name: 'Model ID' },
 	rom_version: { name: 'ROM version' },

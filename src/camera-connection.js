@@ -8,6 +8,8 @@ import { InquiryVariables, PolledInquiries, VariableDefinitions } from './variab
 
 const RECONNECT_INTERVAL = 5000
 const POLL_AFTER_COMMAND_DELAY = 300
+/** How long a stored preset is reported as just stored, for the flash of the preset button */
+export const PRESET_STORED_DURATION = 1000
 
 const isTimeout = (reason) => reason instanceof Error && /Timeout|did not answer/.test(reason.message)
 const isUnsupported = (reason) => /^Syntax Error/.test(reason?.packet?.name ?? '')
@@ -50,6 +52,8 @@ export class CameraConnection {
 	pollTimer = undefined
 	/** @type {NodeJS.Timeout | undefined} */
 	pollSoonTimer = undefined
+	/** @type {NodeJS.Timeout | undefined} */
+	presetStoredTimer = undefined
 	polling = false
 	connectGeneration = 0
 
@@ -132,6 +136,7 @@ export class CameraConnection {
 		clearTimeout(this.reconnectTimer)
 		this.reconnectTimer = undefined
 		this.stopPolling()
+		clearTimeout(this.presetStoredTimer)
 		if (this.camera) {
 			this.camera.close()
 			this.camera = undefined
@@ -250,6 +255,19 @@ export class CameraConnection {
 	}
 
 	/**
+	 * Reports the preset as just stored for a moment, after the camera confirmed it.
+	 *
+	 * @param {number} preset
+	 */
+	presetStored(preset) {
+		clearTimeout(this.presetStoredTimer)
+		// Reset first, so that storing the same preset again flashes again
+		this.updateState({ stored_preset: '' })
+		this.updateState({ stored_preset: preset })
+		this.presetStoredTimer = setTimeout(() => this.updateState({ stored_preset: '' }), PRESET_STORED_DURATION)
+	}
+
+	/**
 	 * @param {any} command  Command of the VISCA library
 	 * @param {Record<string, any>} parameterDict
 	 */
@@ -275,6 +293,9 @@ export class CameraConnection {
 				this.setStatus(InstanceStatus.Ok)
 				if (command === commands['preset/recall'] || command === commands['preset/set']) {
 					this.updateState({ last_preset: parameterDict['Preset'] })
+				}
+				if (command === commands['preset/set']) {
+					this.presetStored(parameterDict['Preset'])
 				}
 				this.pollSoon()
 			},

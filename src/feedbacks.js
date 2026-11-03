@@ -76,6 +76,20 @@ export function getFeedbackDefinitions(self) {
 				return lastPreset !== '' && lastPreset === Number(options.preset)
 			},
 		},
+		preset_stored: {
+			type: 'boolean',
+			name: 'Preset was just stored',
+			description: 'Active for 1 s after the camera confirmed storing the preset',
+			defaultStyle: { bgcolor: combineRgb(255, 204, 0), color: combineRgb(0, 0, 0) },
+			options: [
+				{ type: 'number', id: 'preset', label: 'Preset', min: 0, max: 127, default: 0, asInteger: true },
+				cameraOption,
+			],
+			callback: ({ options }) => {
+				const storedPreset = stateOf(options).stored_preset
+				return storedPreset !== '' && storedPreset === Number(options.preset)
+			},
+		},
 		focus_mode: modeFeedback(self, 'Focus mode', 'focus_mode', lut.focusModeArray),
 		white_balance_mode: modeFeedback(self, 'White balance mode', 'white_balance_mode', lut.whiteBalanceModeArray),
 		ae_mode: modeFeedback(self, 'AE mode', 'ae_mode', lut.aeModeArray),
@@ -106,6 +120,7 @@ export function getFeedbackDefinitions(self) {
 export const FeedbacksByVariable = {
 	power: ['power_on'],
 	last_preset: ['preset_active'],
+	stored_preset: ['preset_stored'],
 	focus_mode: ['focus_mode'],
 	white_balance_mode: ['white_balance_mode'],
 	ae_mode: ['ae_mode'],

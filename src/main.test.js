@@ -269,3 +269,28 @@ test('reports a warning when only some cameras are reachable', async () => {
 		camera1.server.close()
 	}
 })
+
+test('flashes a stored preset for a moment', async () => {
+	const { server, port } = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({ host: '127.0.0.1', port, poll_interval: 0 })
+		await sleep(50)
+		host.checkedFeedbacks.clear()
+		await host.actions.preset_set.callback({ options: { preset: 5, camera: 0 } })
+		await sleep(50)
+		assert.strictEqual(host.variables.stored_preset, 5)
+		assert.ok(host.checkedFeedbacks.has('preset_stored'))
+		assert.strictEqual(host.feedbacks.preset_stored.callback({ options: { preset: 5, camera: 0 } }), true)
+		assert.strictEqual(host.feedbacks.preset_stored.callback({ options: { preset: 6, camera: 0 } }), false)
+
+		await sleep(1100)
+		assert.strictEqual(host.variables.stored_preset, '')
+		assert.strictEqual(host.feedbacks.preset_stored.callback({ options: { preset: 5, camera: 0 } }), false)
+		// The preset stays active (green) after the flash
+		assert.strictEqual(host.feedbacks.preset_active.callback({ options: { preset: 5, camera: 0 } }), true)
+	} finally {
+		await instance.destroy()
+		server.close()
+	}
+})
