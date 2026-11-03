@@ -1,0 +1,28 @@
+{
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
+	"id": "marshall-visca",
+	"name": "marshall-visca",
+	"shortname": "marshall-visca",
+	"description": "Controls Marshall CV PTZ cameras over VISCA over IP",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/bitfocus/companion-module-marshall-visca.git",
+	"bugs": "https://github.com/bitfocus/companion-module-marshall-visca/issues",
+	"maintainers": [
+		{
+			"name": "Steffen Zeile",
+			"email": "steffen.zeile@gmail.com"
+		}
+	],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../src/main.js"
+	},
+	"legacyIds": [],
+	"manufacturer": "Marshall",
+	"products": ["CV605", "CV607", "CV612", "CV620", "CV630", "CV730"],
+	"keywords": ["Camera", "PTZ", "VISCA"]
+}
