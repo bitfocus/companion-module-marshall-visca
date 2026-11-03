@@ -94,3 +94,16 @@ test('rejects queued commands on close', async () => {
         await assert.rejects(request.completion)
     }
 })
+
+test('connect resets the sequence number', async () => {
+    const { server, received, port } = await startFakeCamera()
+    const camera = new MarshallCamera('127.0.0.1', { port })
+    try {
+        await camera.connect()
+        await camera.sendCommand(commands['zoom/stop'], {}).completion
+        assert.deepStrictEqual(received.map(message => message[7]), [0, 1])
+    } finally {
+        camera.close()
+        server.close()
+    }
+})

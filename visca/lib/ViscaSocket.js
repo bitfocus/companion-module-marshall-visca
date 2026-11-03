@@ -82,6 +82,15 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
         return openViscaSocket
     }
 
+    /**
+     * Resets the sequence number, which also checks that the camera is reachable.
+     */
+    async connect() {
+        this._sequenceNumber = undefined
+        await this._nextSequenceNumber()
+        this._sequenceNumber--
+    }
+
     close() {
         for (const openViscaSocket of this.openViscaSockets.values()) {
             openViscaSocket.close(new Error('Connection closed'))

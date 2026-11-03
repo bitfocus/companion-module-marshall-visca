@@ -75,6 +75,10 @@ class ViscaCamera extends EventEmitter {
         return request
     }
 
+    connect() {
+        return this.viscaSocket.connect()
+    }
+
     close() {
         for (const request of this._queue.splice(0)) {
             request.fail(new Error('Camera connection closed'))
