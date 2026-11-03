@@ -9,21 +9,38 @@ const INQUIRY_ANSWERS = {
 	'81090400ff': [0x90, 0x50, 0x02, 0xff],
 	'81090612ff': [0x90, 0x50, 0x0f, 0x0f, 0x0f, 0x0e, 0x00, 0x00, 0x01, 0x00, 0xff],
 	'81090002ff': [0x90, 0x50, 0x00, 0x01, 0x05, 0x13, 0x01, 0x04, 0x02, 0xff],
+	// Undocumented value reported by a Marshall camera
+	'81090438ff': [0x90, 0x50, 0x04, 0xff],
 	// Not executable, e.g. in standby
 	'81090447ff': [0x90, 0x60, 0x41, 0xff],
 }
 
-async function startFakeCamera() {
+/**
+ * @param {object} [options]
+ * @param {boolean} [options.latestSequenceNumber]  Stamp replies with the sequence number received last
+ *   and answer with a delay, like the Marshall camera from the field test.
+ */
+async function startFakeCamera({ latestSequenceNumber = false } = {}) {
 	const server = dgram.createSocket('udp4')
 	const received = []
+	let latest = Buffer.alloc(4)
 	server.on('message', (msg, rinfo) => {
 		received.push(msg.toString('hex'))
-		const reply = (type, payload) =>
+		latest = msg.subarray(4, 8)
+		const send = (type, payload) =>
 			server.send(
-				Buffer.from([...type, 0x00, payload.length, ...msg.subarray(4, 8), ...payload]),
+				Buffer.from([
+					...type,
+					0x00,
+					payload.length,
+					...(latestSequenceNumber ? latest : msg.subarray(4, 8)),
+					...payload,
+				]),
 				rinfo.port,
 				rinfo.address,
 			)
+		const reply = (type, payload) =>
+			latestSequenceNumber ? setTimeout(() => send(type, payload), 3) : send(type, payload)
 		if (msg[0] === 0x02) {
 			reply([0x02, 0x01], [0x01])
 		} else if (msg[1] === 0x10) {
@@ -103,9 +120,11 @@ test('polls the status into variables and feedbacks', async () => {
 		assert.ok(host.checkedFeedbacks.has('power_on'))
 		assert.strictEqual(host.feedbacks.power_on.callback({ options: {} }), true)
 
+		assert.strictEqual(host.variables.focus_mode, 'Unknown (0x04)')
+
 		// Unsupported inquiries are only sent once
 		const count = (inquiry) => received.filter((message) => message.endsWith(inquiry)).length
-		assert.strictEqual(count('81090438ff'), 1)
+		assert.strictEqual(count('81090435ff'), 1)
 		assert.ok(count('81090447ff') > 1, 'not executable inquiries are polled again')
 		assert.ok(count('81090400ff') > 1)
 	} finally {
@@ -146,4 +165,23 @@ test('reports bad config for invalid hosts', async () => {
 	await instance.init({ host: 'not a host!', port: 52381 })
 	assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.BadConfig)
 	await instance.destroy()
+})
+
+test('stays connected with a camera that reuses the latest sequence number', async () => {
+	const { server, port } = await startFakeCamera({ latestSequenceNumber: true })
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({ host: '127.0.0.1', port, poll_interval: 0.1 })
+		await sleep(600)
+		assert.deepStrictEqual(
+			host.statuses.filter(([status]) => status === InstanceStatus.ConnectionFailure),
+			[],
+		)
+		assert.strictEqual(host.variables.power, 'On')
+		assert.strictEqual(host.variables.model_id, '0513')
+		assert.strictEqual(host.variables.pan_position, -2)
+	} finally {
+		await instance.destroy()
+		server.close()
+	}
 })
