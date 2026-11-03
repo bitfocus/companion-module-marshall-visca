@@ -56,9 +56,11 @@ test('presets only use existing actions, feedbacks and options', () => {
 	assert.deepStrictEqual(new Set(referenced), new Set(Object.keys(presets)))
 	assert.match(presets.speed_up.style.text, /\$\(cam:pan_speed\)/)
 	assert.match(presets.camera_select_3.style.text, /\$\(cam:cam3_name\)/)
+	// Selection buttons for all cameras, the name only for configured ones
+	assert.strictEqual(presets.camera_select_8.style.text, 'CAM 8')
+	const single = getPresetDefinitions('cam', [{ number: 1 }], definitions).presets
 	assert.ok(
-		!getPresetDefinitions('cam', [{ number: 1 }], definitions).presets.camera_select_1,
-		'no selection for one camera',
+		single.camera_select_1 && single.camera_select_8 && single.camera_select_next && single.camera_select_previous,
 	)
 })
 

@@ -3,6 +3,7 @@ import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
 import { Protocols } from '../visca/lib/Marshall/MarshallCamera.js'
 import { getActionDefinitions } from './actions.js'
 import { CameraConnection } from './camera-connection.js'
+import { MAX_CAMERAS } from './camera-option.js'
 import { getModel, Models, combineModels } from './models.js'
 import { getPresetDefinitions } from './presets.js'
 import { FeedbacksByVariable, getFeedbackDefinitions } from './feedbacks.js'
@@ -11,7 +12,6 @@ import { UpgradeScripts } from './upgrades.js'
 
 export { UpgradeScripts }
 
-export const MAX_CAMERAS = 8
 const DEFAULT_SPEED = { pan: 12, tilt: 10, zoom: 4 }
 
 /**

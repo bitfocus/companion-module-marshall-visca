@@ -1,5 +1,6 @@
 // @ts-check
 import { combineRgb } from '@companion-module/base'
+import { MAX_CAMERAS } from './camera-option.js'
 
 const white = combineRgb(255, 255, 255)
 const black = combineRgb(0, 0, 0)
@@ -121,7 +122,7 @@ function fillDefaults(presets, actions, feedbacks) {
 
 /**
  * @param {string} label  Label of the connection, used to show variables on the buttons.
- * @param {{ number: number }[]} cameras  Configured cameras, for the camera selection buttons
+ * @param {{ number: number }[]} cameras  Configured cameras, their names are shown on the camera selection buttons
  * @param {object} definitions  Definitions the presets use, to fill in option defaults
  * @param {import('@companion-module/base').CompanionActionDefinitions} definitions.actions
  * @param {import('@companion-module/base').CompanionFeedbackDefinitions} definitions.feedbacks
@@ -142,32 +143,32 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 		structure.push({ id, name, description, definitions: Object.keys(definitions) })
 	}
 
-	if (cameras.length > 1) {
-		addSection(
-			'camera_select',
-			'Camera Selection',
-			'Selects the camera that all other buttons control, green while selected',
-			{
-				...Object.fromEntries(
-					cameras.map(({ number }) => [
-						`camera_select_${number}`,
-						press(
-							`Select Camera ${number}`,
-							`CAM ${number}\n$(${label}:cam${number}_name)`,
-							[action('camera_select', { camera: number })],
-							[{ feedbackId: 'camera_selected', options: { camera: number }, style: { bgcolor: green } }],
-						),
-					]),
-				),
-				camera_select_previous: press('Previous Camera', `◀ CAM\n$(${label}:selected_camera_name)`, [
-					action('camera_select_previous'),
+	const configured = new Set(cameras.map(({ number }) => number))
+	addSection(
+		'camera_select',
+		'Camera Selection',
+		'Selects the camera that all other buttons control, green while selected. Configure the cameras in the connection settings.',
+		{
+			...Object.fromEntries(
+				Array.from({ length: MAX_CAMERAS }, (_, idx) => idx + 1).map((number) => [
+					`camera_select_${number}`,
+					press(
+						`Select Camera ${number}`,
+						// The name variable only exists for configured cameras
+						configured.has(number) ? `CAM ${number}\n$(${label}:cam${number}_name)` : `CAM ${number}`,
+						[action('camera_select', { camera: number })],
+						[{ feedbackId: 'camera_selected', options: { camera: number }, style: { bgcolor: green } }],
+					),
 				]),
-				camera_select_next: press('Next Camera', `CAM ▶\n$(${label}:selected_camera_name)`, [
-					action('camera_select_next'),
-				]),
-			},
-		)
-	}
+			),
+			camera_select_previous: press('Previous Camera', `◀ CAM\n$(${label}:selected_camera_name)`, [
+				action('camera_select_previous'),
+			]),
+			camera_select_next: press('Next Camera', `CAM ▶\n$(${label}:selected_camera_name)`, [
+				action('camera_select_next'),
+			]),
+		},
+	)
 
 	addSection(
 		'pan_tilt',
