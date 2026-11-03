@@ -5,6 +5,12 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { InstanceStatus } from '@companion-module/base'
 import MarshallViscaInstance from './main.js'
 
+const INQUIRY_ANSWERS = {
+	'81090400ff': [0x90, 0x50, 0x02, 0xff],
+	'81090612ff': [0x90, 0x50, 0x0f, 0x0f, 0x0f, 0x0e, 0x00, 0x00, 0x01, 0x00, 0xff],
+	'81090002ff': [0x90, 0x50, 0x00, 0x01, 0x05, 0x13, 0x01, 0x04, 0x02, 0xff],
+}
+
 async function startFakeCamera() {
 	const server = dgram.createSocket('udp4')
 	const received = []
@@ -18,6 +24,9 @@ async function startFakeCamera() {
 			)
 		if (msg[0] === 0x02) {
 			reply([0x02, 0x01], [0x01])
+		} else if (msg[1] === 0x10) {
+			// Unknown inquiries are answered with a syntax error, like an unsupported command
+			reply([0x01, 0x11], INQUIRY_ANSWERS[msg.subarray(8).toString('hex')] ?? [0x90, 0x60, 0x02, 0xff])
 		} else {
 			reply([0x01, 0x11], [0x90, 0x41, 0xff])
 			reply([0x01, 0x11], [0x90, 0x51, 0xff])
@@ -28,7 +37,7 @@ async function startFakeCamera() {
 }
 
 function createInstance() {
-	const host = { statuses: [], actions: undefined }
+	const host = { statuses: [], actions: undefined, feedbacks: undefined, variables: {}, checkedFeedbacks: new Set() }
 	const context = {
 		_isInstanceContext: true,
 		id: 'test',
@@ -36,10 +45,16 @@ function createInstance() {
 		upgradeScripts: [],
 		saveConfig: () => {},
 		setActionDefinitions: (actions) => (host.actions = actions),
+		setFeedbackDefinitions: (feedbacks) => (host.feedbacks = feedbacks),
+		setVariableDefinitions: () => {},
+		setVariableValues: (values) => Object.assign(host.variables, values),
+		checkFeedbacks: (ids) => ids.forEach((id) => host.checkedFeedbacks.add(id)),
 		updateStatus: (status, message) => host.statuses.push([status, message]),
 	}
 	return { instance: new MarshallViscaInstance(context), host }
 }
+
+const isCommand = (message) => message.startsWith('0100')
 
 test('reports bad config without host', async () => {
 	const { instance, host } = createInstance()
@@ -52,18 +67,43 @@ test('connects and sends actions to the camera', async () => {
 	const { server, received, port } = await startFakeCamera()
 	const { instance, host } = createInstance()
 	try {
-		await instance.init({ host: '127.0.0.1', port })
+		await instance.init({ host: '127.0.0.1', port, poll_interval: 0 })
 		await sleep(50)
 		assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.Ok)
 
 		await host.actions.pan_tilt_drive.callback({ options: { pan_speed: 24, tilt_speed: 20, direction: 'Right' } })
 		await host.actions.preset_recall.callback({ options: { preset: 3 } })
 		await sleep(50)
-		assert.deepStrictEqual(received, [
-			'020000010000000001',
-			'01000009000000018101060118140203ff',
-			'01000007000000028101043f0203ff',
+		assert.deepStrictEqual(received.filter(isCommand), [
+			'01000009000000028101060118140203ff',
+			'01000007000000038101043f0203ff',
 		])
+		assert.strictEqual(host.variables.last_preset, 3)
+		assert.strictEqual(host.feedbacks.preset_active.callback({ options: { preset: 3 } }), true)
+	} finally {
+		await instance.destroy()
+		server.close()
+	}
+})
+
+test('polls the status into variables and feedbacks', async () => {
+	const { server, received, port } = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({ host: '127.0.0.1', port, poll_interval: 0.1 })
+		await sleep(400)
+		assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.Ok)
+		assert.strictEqual(host.variables.power, 'On')
+		assert.strictEqual(host.variables.pan_position, -2)
+		assert.strictEqual(host.variables.tilt_position, 0x10)
+		assert.strictEqual(host.variables.model_id, '0513')
+		assert.ok(host.checkedFeedbacks.has('power_on'))
+		assert.strictEqual(host.feedbacks.power_on.callback({ options: {} }), true)
+
+		// Unsupported inquiries are only sent once
+		const count = (inquiry) => received.filter((message) => message.endsWith(inquiry)).length
+		assert.strictEqual(count('81090438ff'), 1)
+		assert.ok(count('81090400ff') > 1)
 	} finally {
 		await instance.destroy()
 		server.close()
