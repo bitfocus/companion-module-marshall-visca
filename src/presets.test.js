@@ -24,7 +24,9 @@ test('presets only use existing actions, feedbacks and options', () => {
 
 	for (const [presetId, preset] of Object.entries(presets)) {
 		for (const step of preset.steps) {
-			for (const entry of [...step.down, ...step.up]) {
+			// Action sets are arrays (down, up) or { options, actions } for hold durations
+			const entries = Object.values(step).flatMap((set) => (Array.isArray(set) ? set : set.actions))
+			for (const entry of entries) {
 				assert.ok(actions[entry.actionId], `${presetId}: unknown action ${entry.actionId}`)
 				checkOptions(actions[entry.actionId], entry.options, presetId)
 			}
@@ -38,4 +40,14 @@ test('presets only use existing actions, feedbacks and options', () => {
 	const referenced = structure.flatMap((section) => section.definitions)
 	assert.deepStrictEqual(new Set(referenced), new Set(Object.keys(presets)))
 	assert.match(presets.speed_up.style.text, /\$\(cam:pan_speed\)/)
+})
+
+test('preset buttons recall on short press and store when held', () => {
+	const [step] = getPresetDefinitions('cam').presets.preset_3.steps
+	assert.deepStrictEqual(step.down, [])
+	assert.deepStrictEqual(step.up, [{ actionId: 'preset_recall', options: { preset: 3 } }])
+	assert.deepStrictEqual(step[2000], {
+		options: { runWhileHeld: true },
+		actions: [{ actionId: 'preset_set', options: { preset: 3 } }],
+	})
 })

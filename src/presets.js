@@ -55,6 +55,33 @@ const PAN_TILT_DIRECTIONS = [
 ]
 
 const PRESET_NUMBERS = Array.from({ length: 16 }, (_, idx) => idx)
+const PRESET_SAVE_HOLD_TIME = 2000
+
+/**
+ * Recalls the preset on a short press and stores it when held.
+ * Companion runs the hold actions instead of the release actions, so a long press does not recall.
+ *
+ * @param {number} preset
+ * @returns {import('@companion-module/base').CompanionSimplePresetDefinition}
+ */
+const presetButton = (preset) => ({
+	type: 'simple',
+	name: `Preset ${preset}`,
+	style: style(`PRESET\n${preset}`),
+	steps: [
+		{
+			down: [],
+			up: [action('preset_recall', { preset })],
+			[PRESET_SAVE_HOLD_TIME]: {
+				// Stores while still held, so the user sees the result without releasing
+				options: { runWhileHeld: true },
+				actions: [action('preset_set', { preset })],
+			},
+		},
+	],
+	feedbacks: [{ feedbackId: 'preset_active', options: { preset }, style: { bgcolor: green } }],
+	notes: `Short press: recall preset ${preset}. Hold ${PRESET_SAVE_HOLD_TIME / 1000} s: store the current position as preset ${preset}.`,
+})
 
 /**
  * @param {string} label  Label of the connection, used to show variables on the buttons.
@@ -116,32 +143,10 @@ export function getPresetDefinitions(label) {
 	})
 
 	addSection(
-		'preset_recall',
-		'Preset Recall',
-		'Recalls a preset, green while it was the last recalled preset',
-		Object.fromEntries(
-			PRESET_NUMBERS.map((preset) => [
-				`preset_recall_${preset}`,
-				press(
-					`Recall Preset ${preset}`,
-					`PRESET\n${preset}`,
-					[action('preset_recall', { preset })],
-					[{ feedbackId: 'preset_active', options: { preset }, style: { bgcolor: green } }],
-				),
-			]),
-		),
-	)
-
-	addSection(
-		'preset_set',
-		'Preset Set',
-		'Stores the current position as preset',
-		Object.fromEntries(
-			PRESET_NUMBERS.map((preset) => [
-				`preset_set_${preset}`,
-				press(`Set Preset ${preset}`, `SET\n${preset}`, [action('preset_set', { preset })]),
-			]),
-		),
+		'presets',
+		'Presets',
+		`Short press recalls the preset, holding for ${PRESET_SAVE_HOLD_TIME / 1000} s stores the current position. Green while it was the last recalled preset.`,
+		Object.fromEntries(PRESET_NUMBERS.map((preset) => [`preset_${preset}`, presetButton(preset)])),
 	)
 
 	addSection('camera', 'Camera', undefined, {
