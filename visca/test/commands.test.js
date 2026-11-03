@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert'
 import { Match, Pattern } from '../lib/Packets.js'
 import { Range, ParameterGroup } from '../lib/Parameters.js'
-import commands from '../lib/Marshall/commands.js'
+import commands, { inquiries } from '../lib/Marshall/commands.js'
 
 const senderAddress = new ParameterGroup(new Range('Address', 1, 7), {
 	nHex: 1,
@@ -66,3 +66,35 @@ test('every command has unique parameter names', () => {
 		assert.strictEqual(new Set(names).size, names.length, key)
 	}
 })
+
+const hex = (payload) => Buffer.from(payload).toString('hex').toUpperCase().match(/../g).join(' ')
+const bytes = (hexString) => [...Buffer.from(hexString.replace(/\s+/g, ''), 'hex')]
+
+const answers = [
+	['power', '81 09 04 00 FF', '90 50 02 FF', { 'Power Mode': 'On' }],
+	['zoomPosition', '81 09 04 47 FF', '90 50 07 0A 0C 00 FF', { 'Zoom Position': 0x7ac0 }],
+	['focusMode', '81 09 04 38 FF', '90 50 03 FF', { 'Focus Mode': 'Manual Focus' }],
+	['aeMode', '81 09 04 39 FF', '90 50 0B FF', { 'AE Mode': 'Iris Priority' }],
+	['irisPosition', '81 09 04 4B FF', '90 50 00 00 01 05 FF', { Position: 0x15 }],
+	[
+		'panTiltPosition',
+		'81 09 06 12 FF',
+		'90 50 0F 0F 0F 0E 00 01 02 03 FF',
+		{ 'Pan Position': -2, 'Tilt Position': 0x0123 },
+	],
+	[
+		'version',
+		'81 09 00 02 FF',
+		'90 50 00 01 05 13 01 04 02 FF',
+		{ 'Vendor ID': '0001', 'Model ID': '0513', 'ROM Version': '0104', 'Maximum Socket': 2 },
+	],
+]
+
+for (const [key, request, reply, parameterDict] of answers) {
+	test(`inquiry ${key} is sent and answered`, () => {
+		const inquiry = inquiries[key]
+		assert.strictEqual(hex(inquiry.pattern.writePayload({ Address: 1 })), request)
+		const answer = inquiry.replies.find((packet) => packet.name === 'Answer')
+		assert.deepStrictEqual(answer.pattern.readPayload(bytes(reply)), { Address: 1, ...parameterDict })
+	})
+}

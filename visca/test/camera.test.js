@@ -2,13 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert'
 import dgram from 'node:dgram'
 import MarshallCamera from '../lib/Marshall/MarshallCamera.js'
-import commands from '../lib/Marshall/commands.js'
+import commands, { inquiries } from '../lib/Marshall/commands.js'
 
 /**
  * Minimal VISCA over IP camera: answers the sequence reset and replies to
  * every command with ack + completion (or the given error payload).
  */
-function startFakeCamera({ errorPayload, silent = false } = {}) {
+function startFakeCamera({ errorPayload, answerPayload, silent = false } = {}) {
 	const server = dgram.createSocket('udp4')
 	const received = []
 	server.on('message', (msg, rinfo) => {
@@ -20,6 +20,8 @@ function startFakeCamera({ errorPayload, silent = false } = {}) {
 		const reply = (data) => server.send(data, rinfo.port, rinfo.address)
 		if (msg[0] === 0x02 && msg[1] === 0x00) {
 			reply(header([0x02, 0x01], [0x01]))
+		} else if (msg[1] === 0x10) {
+			reply(header([0x01, 0x11], answerPayload))
 		} else if (errorPayload) {
 			reply(header([0x01, 0x11], errorPayload))
 		} else {
@@ -115,6 +117,31 @@ test('connect resets the sequence number', async () => {
 			received.map((message) => message[7]),
 			[0, 1],
 		)
+	} finally {
+		camera.close()
+		server.close()
+	}
+})
+
+test('sends an inquiry and resolves the answer', async () => {
+	const { server, received, port } = await startFakeCamera({ answerPayload: [0x90, 0x50, 0x03, 0xff] })
+	const camera = new MarshallCamera('127.0.0.1', { port })
+	try {
+		const answer = await camera.sendInquiry(inquiries['power']).answer
+		assert.deepStrictEqual(answer, { 'Power Mode': 'Off (Standby)' })
+		assert.deepStrictEqual(received[1], [0x01, 0x10, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x81, 0x09, 0x04, 0x00, 0xff])
+	} finally {
+		camera.close()
+		server.close()
+	}
+})
+
+test('fails an inquiry with an unknown answer right away', async () => {
+	const { server, port } = await startFakeCamera({ answerPayload: [0x90, 0x50, 0x07, 0xff] })
+	const camera = new MarshallCamera('127.0.0.1', { port })
+	camera.on('error', () => {})
+	try {
+		await assert.rejects(camera.sendInquiry(inquiries['power']).answer, /Could not understand/)
 	} finally {
 		camera.close()
 		server.close()

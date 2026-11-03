@@ -30,6 +30,9 @@ const panSpeedGroup = par.panSpeed.newGroup(2)
 const tiltSpeedGroup = par.tiltSpeed.newGroup(2)
 const panTiltDirectionGroup = par.panTiltDirection.newGroup(lut.panTiltDirectionArray, 2)
 const presetNumberGroup = par.presetNumber.newGroup(2)
+const aeModeGroup = par.aeMode.newGroup(lut.aeModeArray, 2)
+const panPositionGroup = par.panPosition.newGroup(4)
+const tiltPositionGroup = par.tiltPosition.newGroup(4)
 
 // const irisPositionGroup = par.irisPosition.newGroup(lut.irisPositionArray)
 
@@ -269,6 +272,70 @@ commands['preset/reset'] = preset.newChild(
 	'Reset',
 	new Pattern('00 pq', new Match('pq', presetNumberGroup)),
 	'Clears the stored preset',
+)
+
+/**
+ * Inquiries, answered with '90 50 ... FF'
+ */
+export const inquiries = {}
+
+const inquiryFamily = viscaCommands.newChildFamily(undefined, new Pattern('09'), undefined, Packet.TYPES.INQUERY, [
+	viscaCommands.replyFamily.newChild('Command not executable', new Pattern('60 41'), undefined, Packet.TYPES.ERROR),
+])
+
+const answer = (...patterns) =>
+	viscaCommands.replyFamily.newChild(
+		'Answer',
+		Pattern.concat(new Pattern('50'), ...patterns),
+		undefined,
+		Packet.TYPES.ANSWER,
+	)
+const addInquiry = (key, name, core, ...answerPatterns) => {
+	inquiries[key] = inquiryFamily.newChild(name, new Pattern(core), undefined, Packet.TYPES.INQUERY, [
+		answer(...answerPatterns),
+	])
+}
+
+addInquiry('power', 'Power', '04 00', Pattern.fromParameterGroup(powerModeGroup))
+addInquiry(
+	'zoomPosition',
+	'Zoom Position',
+	'04 47',
+	new Pattern('0p 0q 0r 0s', new Match('pqrs', par.zoomPositionAnswer.newGroup(4))),
+)
+addInquiry(
+	'focusPosition',
+	'Focus Position',
+	'04 48',
+	new Pattern('0p 0q 0r 0s', new Match('pqrs', par.focusPositionAnswer.newGroup(4))),
+)
+addInquiry('focusMode', 'Focus Mode', '04 38', Pattern.fromParameterGroup(focusModeGroup))
+addInquiry('whiteBalanceMode', 'White Balance Mode', '04 35', Pattern.fromParameterGroup(whiteBalanceModeGroup))
+addInquiry('aeMode', 'AE Mode', '04 39', Pattern.fromParameterGroup(aeModeGroup))
+for (const [key, name, core] of [
+	['irisPosition', 'Iris Position', '04 4B'],
+	['shutterPosition', 'Shutter Position', '04 4A'],
+	['gainPosition', 'Gain Position', '04 4C'],
+	['brightPosition', 'Bright Position', '04 4D'],
+]) {
+	addInquiry(key, name, core, new Pattern('00 00 0p 0q', new Match('pq', par.positionAnswer.newGroup(2))))
+}
+addInquiry(
+	'panTiltPosition',
+	'Pan Tilt Position',
+	'06 12',
+	new Pattern('0p 0p 0p 0p 0t 0t 0t 0t', [new Match('pppp', panPositionGroup), new Match('tttt', tiltPositionGroup)]),
+)
+addInquiry(
+	'version',
+	'Version',
+	'00 02',
+	new Pattern('vv vv mm mm rr rr ss', [
+		new Match('vvvv', par.vendorId.newGroup()),
+		new Match('mmmm', par.modelId.newGroup()),
+		new Match('rrrr', par.romVersion.newGroup()),
+		new Match('ss', par.maximumSocket.newGroup(2)),
+	]),
 )
 
 export default commands

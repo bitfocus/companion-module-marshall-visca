@@ -89,3 +89,11 @@ export const panTiltDirectionArray = {
 	'Down Right': 0x22,
 	Stop: 0x33,
 }
+
+export const aeModeArray = {
+	'Full Auto': 0x00,
+	Manual: 0x03,
+	'Shutter Priority': 0x0a,
+	'Iris Priority': 0x0b,
+	Bright: 0x0d,
+}

@@ -1,4 +1,4 @@
-import { Range, List } from '../Parameters.js'
+import { Range, SignedRange, List, HexLiteral } from '../Parameters.js'
 import * as lut from './lookupTables.js'
 
 export const addressParameter = new Range('Address', 1, 7)
@@ -24,3 +24,16 @@ export const panSpeed = new Range('Pan Speed', 0x01, 0x18, `${0x01} (Low) to ${0
 export const tiltSpeed = new Range('Tilt Speed', 0x01, 0x14, `${0x01} (Low) to ${0x14} (High)`)
 export const panTiltDirection = new List('Direction', Object.keys(lut.panTiltDirectionArray))
 export const presetNumber = new Range('Preset', 0, 127, `0 to 127`)
+
+export const aeMode = new List('AE Mode', Object.keys(lut.aeModeArray))
+export const panPosition = new SignedRange('Pan Position', -0x8000, 0x7fff, 'Signed, range depends on the model')
+export const tiltPosition = new SignedRange('Tilt Position', -0x8000, 0x7fff, 'Signed, range depends on the model')
+
+// Answers of inquiries can exceed the ranges allowed for commands (e.g. digital zoom)
+export const zoomPositionAnswer = new Range('Zoom Position', 0x0000, 0xffff)
+export const focusPositionAnswer = new Range('Focus Position', 0x0000, 0xffff)
+export const positionAnswer = new Range('Position', 0x00, 0xff)
+export const vendorId = new HexLiteral('Vendor ID', 4)
+export const modelId = new HexLiteral('Model ID', 4)
+export const romVersion = new HexLiteral('ROM Version', 4)
+export const maximumSocket = new Range('Maximum Socket', 0x00, 0xff)
