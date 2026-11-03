@@ -33,8 +33,9 @@ const presetNumberGroup = par.presetNumber.newGroup(2)
 const aeModeGroup = par.aeMode.newGroup(lut.aeModeArray, 2)
 const panPositionGroup = par.panPosition.newGroup(4)
 const tiltPositionGroup = par.tiltPosition.newGroup(4)
-
-// const irisPositionGroup = par.irisPosition.newGroup(lut.irisPositionArray)
+const onOffGroup = par.onOff.newGroup(lut.defaultOnOffArray, 2)
+const irisPositionGroup = par.irisPosition.newGroup(lut.irisPositionArray, 2)
+const panTiltLimitCornerGroup = par.panTiltLimitCorner.newGroup(lut.panTiltLimitCornerArray, 1)
 
 const commands = {}
 
@@ -273,6 +274,115 @@ commands['preset/reset'] = preset.newChild(
 	new Pattern('00 pq', new Match('pq', presetNumberGroup)),
 	'Clears the stored preset',
 )
+
+const addOnOff = (family, key, name, code, comment) => {
+	commands[key] = family.newChild(
+		name,
+		Pattern.concat(new Pattern(code), Pattern.fromParameterGroup(onOffGroup)),
+		comment,
+	)
+}
+
+/**
+ * Adds reset, up, down and direct commands of a value like gain or iris
+ */
+const addAdjustable = (family, key, name, code, directCode, group, comment) => {
+	commands[`${key}/reset`] = family.newChild(`${name} Reset`, new Pattern(`${code} 00`), comment)
+	commands[`${key}/up`] = family.newChild(`${name} Up`, new Pattern(`${code} 02`), comment)
+	commands[`${key}/down`] = family.newChild(`${name} Down`, new Pattern(`${code} 03`), comment)
+	commands[`${key}/direct`] = family.newChild(
+		`${name} Direct`,
+		new Pattern(`${directCode} 00 00 0p 0q`, new Match('pq', group)),
+		comment,
+	)
+}
+
+const exposure = tasks.newChildFamily('Exposure', new Pattern('04'))
+commands['exposure/mode'] = exposure.newChild(
+	'AE Mode',
+	Pattern.concat(new Pattern('39'), Pattern.fromParameterGroup(aeModeGroup)),
+)
+addAdjustable(exposure, 'exposure/iris', 'Iris', '0B', '4B', irisPositionGroup, 'Manual or Iris Priority mode')
+addAdjustable(
+	exposure,
+	'exposure/shutter',
+	'Shutter',
+	'0A',
+	'4A',
+	par.shutterPosition.newGroup(2),
+	'Manual or Shutter Priority mode',
+)
+addAdjustable(exposure, 'exposure/gain', 'Gain', '0C', '4C', par.gainPosition.newGroup(2), 'Manual mode')
+addAdjustable(exposure, 'exposure/bright', 'Bright', '0D', '4D', par.brightPosition.newGroup(2), 'Bright mode')
+addOnOff(exposure, 'exposure/compensation', 'Exposure Compensation', '3E')
+addAdjustable(
+	exposure,
+	'exposure/compensation',
+	'Exposure Compensation',
+	'0E',
+	'4E',
+	par.exposureCompensation.newGroup(2),
+	'Exposure Compensation on',
+)
+addOnOff(exposure, 'exposure/backlight', 'Backlight Compensation', '33')
+addOnOff(exposure, 'exposure/wdr', 'Wide Dynamic Range', '3D')
+
+const image = tasks.newChildFamily('Image', new Pattern('04'))
+addAdjustable(image, 'image/aperture', 'Aperture', '02', '42', par.aperture.newGroup(2))
+commands['image/colorGain'] = image.newChild(
+	'Color Gain',
+	new Pattern('49 00 00 00 0p', new Match('p', par.colorGain.newGroup(1))),
+)
+commands['image/gamma'] = image.newChild('Gamma', new Pattern('5B 0p', new Match('p', par.gamma.newGroup(1))))
+commands['image/noiseReduction'] = image.newChild(
+	'Noise Reduction',
+	new Pattern('53 0p', new Match('p', par.noiseReduction.newGroup(1))),
+)
+addOnOff(image, 'image/flip', 'Flip', '66')
+addOnOff(image, 'image/mirror', 'Mirror', '61')
+commands['image/defog'] = image.newChild(
+	'Defog',
+	Pattern.concat(new Pattern('37'), Pattern.fromParameterGroup(onOffGroup), new Pattern('00')),
+)
+addOnOff(image, 'image/freeze', 'Picture Freeze', '62')
+
+commands['panTilt/absolute'] = panTilt.newChild(
+	'Absolute Position',
+	new Pattern('02 vv ww 0p 0p 0p 0p 0t 0t 0t 0t', [
+		new Match('vv', panSpeedGroup),
+		new Match('ww', tiltSpeedGroup),
+		new Match('pppp', panPositionGroup),
+		new Match('tttt', tiltPositionGroup),
+	]),
+)
+commands['panTilt/relative'] = panTilt.newChild(
+	'Relative Position',
+	new Pattern('03 vv ww 0p 0p 0p 0p 0t 0t 0t 0t', [
+		new Match('vv', panSpeedGroup),
+		new Match('ww', tiltSpeedGroup),
+		new Match('pppp', panPositionGroup),
+		new Match('tttt', tiltPositionGroup),
+	]),
+)
+commands['panTilt/limit/set'] = panTilt.newChild(
+	'Limit Set',
+	new Pattern('07 00 0k 0p 0p 0p 0p 0t 0t 0t 0t', [
+		new Match('k', panTiltLimitCornerGroup),
+		new Match('pppp', panPositionGroup),
+		new Match('tttt', tiltPositionGroup),
+	]),
+)
+commands['panTilt/limit/clear'] = panTilt.newChild(
+	'Limit Clear',
+	new Pattern('07 01 0k 07 0F 0F 0F 07 0F 0F 0F', new Match('k', panTiltLimitCornerGroup)),
+)
+
+const menu = tasks.newChildFamily('Menu', new Pattern('06 06'))
+commands['menu/on'] = menu.newChild('On', new Pattern('02'), 'Navigate with Pan Tilt - Drive')
+commands['menu/off'] = menu.newChild('Off', new Pattern('03'))
+commands['menu/toggle'] = menu.newChild('Toggle', new Pattern('10'), 'Navigate with Pan Tilt - Drive')
+
+addOnOff(tasks, 'tally', 'Tally', '7E 01 0A 00', 'Sony compatible tally lamp, not available on every model')
 
 /**
  * Inquiries, answered with '90 50 ... FF'

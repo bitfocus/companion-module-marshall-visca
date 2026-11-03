@@ -37,3 +37,19 @@ export const vendorId = new HexLiteral('Vendor ID', 4)
 export const modelId = new HexLiteral('Model ID', 4)
 export const romVersion = new HexLiteral('ROM Version', 4)
 export const maximumSocket = new Range('Maximum Socket', 0x00, 0xff)
+
+export const onOff = new List('State', Object.keys(lut.defaultOnOffArray))
+export const shutterPosition = new Range(
+	'Shutter Position',
+	0x00,
+	0x15,
+	'Shutter speed table depends on the model and frame rate',
+)
+export const gainPosition = new Range('Gain Position', 0x00, 0x0f)
+export const brightPosition = new Range('Bright Position', 0x00, 0x1f)
+export const exposureCompensation = new Range('Exposure Compensation', 0x00, 0x0e, `${0x07} is neutral`)
+export const aperture = new Range('Aperture', 0x00, 0x0f, 'Sharpness, 0 (Low) to 15 (High)')
+export const noiseReduction = new Range('Noise Reduction Level', 0, 5, '0 (Off) to 5 (High)')
+export const gamma = new Range('Gamma', 0, 4, 'Gamma table depends on the model')
+export const colorGain = new Range('Color Gain', 0x00, 0x0e, 'Saturation, 0 (Low) to 14 (High)')
+export const panTiltLimitCorner = new List('Corner', Object.keys(lut.panTiltLimitCornerArray))

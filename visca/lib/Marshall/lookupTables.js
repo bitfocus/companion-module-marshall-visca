@@ -97,3 +97,8 @@ export const aeModeArray = {
 	'Iris Priority': 0x0b,
 	Bright: 0x0d,
 }
+
+export const panTiltLimitCornerArray = {
+	'Down Left': 0x00,
+	'Up Right': 0x01,
+}
