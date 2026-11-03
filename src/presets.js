@@ -230,6 +230,17 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 			[{ feedbackId: 'power_on', options: {}, style: { bgcolor: green } }],
 		),
 		power_off: press('Power Off', 'POWER\nOFF', [action('power', { power_mode: 'Off (Standby)' })]),
+	})
+
+	addSection('focus', 'Focus', 'Near and far focus while the button is held, they only work in manual focus', {
+		focus_near: {
+			...pressRelease('Focus Near', 'FOCUS\nNEAR', [action('focus_near_standard')], [action('focus_stop')]),
+			notes: 'Focuses nearer while held. Only works in manual focus.',
+		},
+		focus_far: {
+			...pressRelease('Focus Far', 'FOCUS\nFAR', [action('focus_far_standard')], [action('focus_stop')]),
+			notes: 'Focuses farther while held. Only works in manual focus.',
+		},
 		focus_auto: press(
 			'Auto Focus',
 			'AUTO\nFOCUS',

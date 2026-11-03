@@ -73,3 +73,21 @@ test('preset buttons recall on short press and store when held', () => {
 		actions: [{ actionId: 'preset_set', options: { preset: 3, camera: 0 } }],
 	})
 })
+
+test('focus buttons move while held and stop on release', () => {
+	const { presets } = getPresetDefinitions('cam', [], definitions)
+	for (const [id, actionId] of [
+		['focus_near', 'focus_near_standard'],
+		['focus_far', 'focus_far_standard'],
+	]) {
+		const [step] = presets[id].steps
+		assert.deepStrictEqual(
+			step.down.map((entry) => entry.actionId),
+			[actionId],
+		)
+		assert.deepStrictEqual(
+			step.up.map((entry) => entry.actionId),
+			['focus_stop'],
+		)
+	}
+})
