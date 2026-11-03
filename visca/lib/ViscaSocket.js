@@ -194,4 +194,5 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 	}
 }
 
+export { AbstractViscaSocket, OpenViscaSocket, ViscaOverIpSocket }
 export default ViscaOverIpSocket
