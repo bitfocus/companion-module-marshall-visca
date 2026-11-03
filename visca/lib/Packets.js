@@ -34,7 +34,7 @@ class CommandFamily extends PacketFamily {
 
         const childReplies = [...this.replies, ...replies]
         
-        const childReplyFamily = this.replyFamily.newChildFamily(replyPrefix, replyPostfix)
+        const childReplyFamily = this.replyFamily.newChildFamily(name, replyPrefix, replyPostfix)
         
         return new CommandFamily(name, childPrefix, childPostfix, type, childReplies, childReplyFamily)
     }
@@ -73,8 +73,8 @@ class Packet {
 }
 
 class Command extends Packet {
-    constructor(name, familiyName, type, pattern, comment, replies) {
-        super(name, familiyName, type, pattern, comment)
+    constructor(name, familyName, type, pattern, comment, replies) {
+        super(name, familyName, type, pattern, comment)
         this.replies = replies
     }
 }
