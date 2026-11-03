@@ -12,6 +12,7 @@ class OpenViscaSocket extends EventEmitter {
     }
 
     close(...args) {
+        if (this.closed) { return }
         this.emit('close', ...args)
     }
 
@@ -21,10 +22,12 @@ class OpenViscaSocket extends EventEmitter {
 }
 
 // This is just for reference
-class AbstractViscaSocket {
+class AbstractViscaSocket extends EventEmitter {
     async sendMessage(message) {
         return (new OpenViscaSocket).close('Abstract Visca Socket used', message)
     }
+
+    close() {}
 }
 
 const PayloadTypes = Object.freeze({
@@ -56,24 +59,34 @@ const ViscaPacketPayloadTypeMapping = Object.freeze({
 })
 
 class ViscaOverIpSocket extends AbstractViscaSocket {
-    constructor(connection, address=1, nSockets=2) {
+    constructor(connection, address=1, nSockets=2, resetTimeout=1000) {
         super()
         this.nSockets = nSockets
         this.address = address
+        this.resetTimeout = resetTimeout
         this.connection = connection
         connection.on('message', this._receive.bind(this))
+        connection.on('error', error => this.emit('error', error))
 
-        this.sequenceNumber = this._sequenceNumberGenerator()
+        this._sequenceNumber = undefined
+        this._sequenceNumberReset = undefined
 
         this.openViscaSockets = new Map()
     }
 
     async sendMessage(message) {
-        const sequenceNumber = (await this.sequenceNumber.next()).value
+        const sequenceNumber = await this._nextSequenceNumber()
         const payloadType = ViscaPacketPayloadTypeMapping[message.command.type]
         const payloadTypeBytes = PayloadTypeBytes[payloadType]
         const openViscaSocket = await this._send(payloadTypeBytes, sequenceNumber, message.getFinalPayload())
         return openViscaSocket
+    }
+
+    close() {
+        for (const openViscaSocket of this.openViscaSockets.values()) {
+            openViscaSocket.close(new Error('Connection closed'))
+        }
+        this.connection.close()
     }
 
     async _send(type, sequenceNumber, payload) {
@@ -85,7 +98,6 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
             ...byteSequenceNumber,
             ...payload
         ]
-        this.connection.send(dataArray)
 
         if (this.openViscaSockets.has(sequenceNumber)) {
             const oldOpenViscaSocket = this.openViscaSockets.get(sequenceNumber)
@@ -94,69 +106,79 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 
         const newOpenViscaSocket = new OpenViscaSocket()
         newOpenViscaSocket.on('close', () => {
-            this.openViscaSockets.delete(sequenceNumber)
+            if (this.openViscaSockets.get(sequenceNumber) === newOpenViscaSocket) {
+                this.openViscaSockets.delete(sequenceNumber)
+            }
         })
         this.openViscaSockets.set(sequenceNumber, newOpenViscaSocket)
+
+        // Register the socket before sending, so that a fast reply is not lost
+        this.connection.send(dataArray)
 
         return newOpenViscaSocket
     }
 
     _receive(data) {
-        try {
-            var sequenceNumber = utils.byteArrayToUint(data.slice(4, 8));
-        } catch (error) {
-            throw SyntaxError('Visca Syntax Error: Sequence number')
-        }
-
-        const openViscaSocket = this.openViscaSockets.get(sequenceNumber)
-        if (!openViscaSocket) {
-            console.debug(`Received message with unknown sequence number: ${sequenceNumber}`)
+        if (data.length < 8) {
+            this.emit('error', new SyntaxError(`Visca Syntax Error: Message too short (${data.length} bytes)`))
             return
         }
-        
-        try {
-            var payloadLength = utils.byteArrayToUint(data.slice(2, 4));
-        } catch (error) {
-            throw SyntaxError('Visca Syntax Error: Payload length')
+
+        const sequenceNumber = utils.byteArrayToUint(data.slice(4, 8))
+        const openViscaSocket = this.openViscaSockets.get(sequenceNumber)
+        if (!openViscaSocket) {
+            return
         }
-        try {
-            var payload = data.slice(8, 8 + payloadLength);
-        } catch (error) {
-            throw SyntaxError('Visca Syntax Error: Reading payload')
+
+        const payloadLength = utils.byteArrayToUint(data.slice(2, 4))
+        const payload = data.slice(8, 8 + payloadLength)
+        if (payload.length !== payloadLength) {
+            this.emit('error', new SyntaxError('Visca Syntax Error: Payload length does not match'))
+            return
         }
-        
-        openViscaSocket.incoming(payload) // Convert Uint8Array to number array
+
+        openViscaSocket.incoming(payload)
     }
 
-    async *_sequenceNumberGenerator() {
-        while (true) {
-            var sequenceNumber = await this._resetSequenceCounter()
-            while (sequenceNumber < 0xFF_FF_FF_FF) {
-                yield sequenceNumber++
-            }
+    async _nextSequenceNumber() {
+        if (this._sequenceNumber === undefined || this._sequenceNumber >= 0xFF_FF_FF_FF) {
+            // Share a running reset between concurrent callers
+            this._sequenceNumberReset ??= this._resetSequenceCounter().finally(() => {
+                this._sequenceNumberReset = undefined
+            })
+            this._sequenceNumber = await this._sequenceNumberReset
         }
+        return this._sequenceNumber++
     }
 
     async _resetSequenceCounter() {
-        const type = [0x02, 0x00]
+        const type = PayloadTypeBytes[PayloadTypes.CONTROL_COMMAND]
         const sequenceNumber = 0
         const payload = [0x01]
         const openViscaSocket = await this._send(type, sequenceNumber, payload)
-        const nextSequenceNumber = await new Promise((resolve, reject) => {
-            if (openViscaSocket.closed) {
-                reject(new Error('Socket closed before message was received'))
-            } else {
-                openViscaSocket.on('close', reject)
+        try {
+            return await new Promise((resolve, reject) => {
+                if (openViscaSocket.closed) {
+                    reject(new Error('Socket closed before message was received'))
+                    return
+                }
+                const timer = setTimeout(() => reject(new Error(`Camera did not answer the sequence number reset within ${this.resetTimeout} ms`)), this.resetTimeout)
+                openViscaSocket.on('close', reason => {
+                    clearTimeout(timer)
+                    reject(reason ?? new Error('Socket closed before message was received'))
+                })
                 openViscaSocket.on('message', payload => {
+                    clearTimeout(timer)
                     if (payload.length === 1 && payload[0] === 1) {
                         resolve(1)
                     } else {
                         reject(new Error('Invalid response for Sequence Counter Reset'))
                     }
                 })
-            }
-        })
-        return nextSequenceNumber
+            })
+        } finally {
+            openViscaSocket.close()
+        }
     }
 }
 
