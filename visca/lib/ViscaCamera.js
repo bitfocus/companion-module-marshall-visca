@@ -1,14 +1,7 @@
 const { ActionRequest } = require('./Request')
-const CommandSet = require('./CommandSet')
 const async = require('async')
 
-const commands = new CommandSet([])
-
 class ViscaCamera {
-    static get COMMANDS() {
-        return commands
-    }
-
     constructor(viscaSocket, address=1, nSockets=2) {
         this.viscaSocket = viscaSocket
         this.address = address
