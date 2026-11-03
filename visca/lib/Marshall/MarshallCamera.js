@@ -16,6 +16,10 @@ class MarshallCamera extends ViscaCamera {
 	sendCommand(command, parameterDict) {
 		return super.sendCommand(command, { Address: this.address, ...parameterDict })
 	}
+
+	sendInquiry(inquiry, parameterDict) {
+		return super.sendInquiry(inquiry, { Address: this.address, ...parameterDict })
+	}
 }
 
 export default MarshallCamera

@@ -53,6 +53,10 @@ class Request {
 		this._setState(RequestStates.PENDING)
 	}
 
+	get completion() {
+		return this._stateMap.get(RequestStates.COMPLETED).promise
+	}
+
 	get state() {
 		return this._state
 	}
@@ -150,10 +154,24 @@ class ActionRequest extends Request {
 	get ack() {
 		return this._stateMap.get(RequestStates.ACK).promise
 	}
+}
 
-	get completion() {
-		return this._stateMap.get(RequestStates.COMPLETED).promise
+class InquiryRequest extends Request {
+	constructor(command, parameterDict) {
+		super(command, parameterDict)
+
+		this._stateMap.get(RequestStates.SENT).expectedType = Packet.TYPES.ANSWER
+	}
+
+	/**
+	 * Resolves with the parameters of the answer, without the address.
+	 */
+	get answer() {
+		return this.completion.then(({ parameterDict }) => {
+			const { Address: _address, ...answer } = parameterDict
+			return answer
+		})
 	}
 }
 
-export { Request, ActionRequest }
+export { Request, ActionRequest, InquiryRequest }
