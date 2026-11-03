@@ -5,9 +5,9 @@ import { getFeedbackDefinitions } from './feedbacks.js'
 import { getPresetDefinitions } from './presets.js'
 
 test('presets only use existing actions, feedbacks and options', () => {
-	const actions = getActionDefinitions({ speed: {} })
+	const actions = getActionDefinitions(/** @type {any} */ ({ speed: {} }))
 	const feedbacks = getFeedbackDefinitions({})
-	const { structure, presets } = getPresetDefinitions('cam')
+	const { structure, presets } = getPresetDefinitions('cam', [{ number: 1 }, { number: 3 }])
 
 	const checkOptions = (definition, options, name) => {
 		for (const [id, value] of Object.entries(options)) {
@@ -40,6 +40,8 @@ test('presets only use existing actions, feedbacks and options', () => {
 	const referenced = structure.flatMap((section) => section.definitions)
 	assert.deepStrictEqual(new Set(referenced), new Set(Object.keys(presets)))
 	assert.match(presets.speed_up.style.text, /\$\(cam:pan_speed\)/)
+	assert.match(presets.camera_select_3.style.text, /\$\(cam:cam3_name\)/)
+	assert.ok(!getPresetDefinitions('cam', [{ number: 1 }]).presets.camera_select_1, 'no selection for one camera')
 })
 
 test('preset buttons recall on short press and store when held', () => {

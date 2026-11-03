@@ -85,12 +85,13 @@ const presetButton = (preset) => ({
 
 /**
  * @param {string} label  Label of the connection, used to show variables on the buttons.
+ * @param {{ number: number }[]} [cameras]  Configured cameras, for the camera selection buttons
  * @returns {{
  *   structure: import('@companion-module/base').CompanionPresetSection[],
  *   presets: import('@companion-module/base').CompanionPresetDefinitions,
  * }}
  */
-export function getPresetDefinitions(label) {
+export function getPresetDefinitions(label, cameras = []) {
 	/** @type {import('@companion-module/base').CompanionPresetDefinitions} */
 	const presets = {}
 	/** @type {import('@companion-module/base').CompanionPresetSection[]} */
@@ -100,6 +101,33 @@ export function getPresetDefinitions(label) {
 			presets[presetId] = preset
 		}
 		structure.push({ id, name, description, definitions: Object.keys(definitions) })
+	}
+
+	if (cameras.length > 1) {
+		addSection(
+			'camera_select',
+			'Camera Selection',
+			'Selects the camera that all other buttons control, green while selected',
+			{
+				...Object.fromEntries(
+					cameras.map(({ number }) => [
+						`camera_select_${number}`,
+						press(
+							`Select Camera ${number}`,
+							`CAM ${number}\n$(${label}:cam${number}_name)`,
+							[action('camera_select', { camera: number })],
+							[{ feedbackId: 'camera_selected', options: { camera: number }, style: { bgcolor: green } }],
+						),
+					]),
+				),
+				camera_select_previous: press('Previous Camera', `◀ CAM\n$(${label}:selected_camera_name)`, [
+					action('camera_select_previous'),
+				]),
+				camera_select_next: press('Next Camera', `CAM ▶\n$(${label}:selected_camera_name)`, [
+					action('camera_select_next'),
+				]),
+			},
+		)
 	}
 
 	addSection(

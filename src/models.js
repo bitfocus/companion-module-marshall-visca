@@ -25,6 +25,18 @@ export function getModel(id) {
 }
 
 /**
+ * Model whose values are offered in actions that can control any of the cameras:
+ * UHD values are only hidden when no camera supports them.
+ *
+ * @param {Model[]} models
+ * @returns {Model}
+ */
+export function combineModels(models) {
+	if (models.length === 1) return models[0]
+	return models.some((model) => model.uhd) ? Models[0] : models[0]
+}
+
+/**
  * Removes values from dropdowns that the model does not support.
  */
 export function filterChoices(model, parameter, itemNames) {

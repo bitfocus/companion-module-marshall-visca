@@ -2,6 +2,7 @@
 import { Range, List } from '../visca/lib/Parameters.js'
 import commands, { createCustomCommand } from '../visca/lib/Marshall/commands.js'
 import * as par from '../visca/lib/Marshall/parameters.js'
+import { cameraOption } from './camera-option.js'
 import { filterChoices } from './models.js'
 
 /**
@@ -9,13 +10,16 @@ import { filterChoices } from './models.js'
  * @typedef {import('@companion-module/base').SomeCompanionActionInputField} ActionInputField
  *
  * @typedef {object} ActionContext  The module instance, or a stub in tests
- * @property {(command: any, parameterDict: Record<string, any>) => void} sendCommand
+ * @property {(command: any, parameterDict: Record<string, any>, camera?: number) => void} sendCommand
+ *   Sends to the camera with the number, 0 or undefined for the selected camera
  * @property {import('./models.js').Model} [model]  Limits the offered values
  * @property {import('./main.js').Speed} speed  Speed of the module speed actions
  * @property {(speed: import('./main.js').Speed) => void} setSpeed
  * @property {(level: import('@companion-module/base').LogLevel, message: string) => void} log
- * @property {Record<string, unknown>} state  Current variable values, from polling
- * @property {(values: Record<string, any>) => void} updateState
+ * @property {(camera: number) => Record<string, unknown>} getCameraState  Variable values from polling
+ * @property {(camera: number, values: Record<string, any>) => void} updateCameraState
+ * @property {(camera: number) => boolean} selectCamera
+ * @property {(offset: number) => void} selectCameraByOffset
  */
 
 /**
@@ -101,8 +105,9 @@ export function getCommandActionDefinitions(self) {
 		actions[toId(key)] = {
 			name: command.familyName ? `${command.familyName} - ${command.name}` : command.name,
 			description: command.comment,
-			options: parameters.map((parameter) => createOption(parameter, self.model)),
-			callback: ({ options }) => self.sendCommand(command, toParameterDict(parameters, options)),
+			options: [...parameters.map((parameter) => createOption(parameter, self.model)), cameraOption],
+			callback: ({ options }) =>
+				self.sendCommand(command, toParameterDict(parameters, options), Number(options.camera)),
 		}
 	}
 
@@ -180,13 +185,17 @@ export function getModuleActionDefinitions(self) {
 		pan_tilt_move: {
 			name: 'Pan Tilt - Move (Module Speed)',
 			description: 'Drives with the speed set by the speed actions, use Stop on release',
-			options: [directionOption],
+			options: [directionOption, cameraOption],
 			callback: ({ options }) =>
-				self.sendCommand(commands['panTilt/drive'], {
-					'Pan Speed': self.speed.pan,
-					'Tilt Speed': self.speed.tilt,
-					Direction: options.direction,
-				}),
+				self.sendCommand(
+					commands['panTilt/drive'],
+					{
+						'Pan Speed': self.speed.pan,
+						'Tilt Speed': self.speed.tilt,
+						Direction: options.direction,
+					},
+					Number(options.camera),
+				),
 		},
 		zoom_move: {
 			name: 'Zoom - Move (Module Speed)',
@@ -203,14 +212,18 @@ export function getModuleActionDefinitions(self) {
 					],
 					default: 'tele',
 				},
+				cameraOption,
 			],
 			callback: ({ options }) => {
+				const camera = Number(options.camera)
 				if (options.direction === 'stop') {
-					self.sendCommand(commands['zoom/stop'], {})
+					self.sendCommand(commands['zoom/stop'], {}, camera)
 				} else {
-					self.sendCommand(commands[`zoom/${options.direction === 'wide' ? 'wide' : 'tele'}/variable`], {
-						Speed: self.speed.zoom,
-					})
+					self.sendCommand(
+						commands[`zoom/${options.direction === 'wide' ? 'wide' : 'tele'}/variable`],
+						{ Speed: self.speed.zoom },
+						camera,
+					)
 				}
 			},
 		},
@@ -234,25 +247,30 @@ export function getModuleActionDefinitions(self) {
 					default: 1,
 					asInteger: true,
 				},
+				cameraOption,
 			],
 			callback: ({ options }) => {
 				const setting = AdjustableSettings[String(options.setting)]
 				if (!setting) return
-				const current = self.state[String(options.setting)]
+				const camera = Number(options.camera)
+				const current = self.getCameraState(camera)[String(options.setting)]
 				if (typeof current !== 'number') {
 					self.log('warn', `${setting.label} is unknown, it needs status polling and a camera that reports it`)
 					return
 				}
 				const value = clamp(setting.parameter, current + Number(options.step))
-				self.sendCommand(commands[setting.command], { [setting.parameter.name]: value })
+				self.sendCommand(commands[setting.command], { [setting.parameter.name]: value }, camera)
 				// Repeated presses build on the new value before the next poll
-				self.updateState({ [String(options.setting)]: value })
+				self.updateCameraState(camera, { [String(options.setting)]: value })
 			},
 		},
 		custom_command: {
 			name: 'Custom VISCA Command',
 			description: 'Sends any VISCA command, e.g. 81 01 04 07 02 FF',
-			options: [{ type: 'textinput', id: 'command', label: 'Command (hex)', default: '81 01 04 07 00 FF' }],
+			options: [
+				{ type: 'textinput', id: 'command', label: 'Command (hex)', default: '81 01 04 07 00 FF' },
+				cameraOption,
+			],
 			callback: ({ options }) => {
 				let command
 				try {
@@ -261,8 +279,26 @@ export function getModuleActionDefinitions(self) {
 					self.log('warn', `Invalid custom command "${options.command}": ${error.message}`)
 					return
 				}
-				self.sendCommand(command, {})
+				self.sendCommand(command, {}, Number(options.camera))
 			},
+		},
+		camera_select: {
+			name: 'Camera - Select',
+			description: 'Selects the camera that actions control when their camera is 0. The number can be a variable.',
+			options: [{ ...cameraOption, description: undefined, min: 1, default: 1 }],
+			callback: ({ options }) => {
+				self.selectCamera(Number(options.camera))
+			},
+		},
+		camera_select_next: {
+			name: 'Camera - Select Next',
+			options: [],
+			callback: () => self.selectCameraByOffset(1),
+		},
+		camera_select_previous: {
+			name: 'Camera - Select Previous',
+			options: [],
+			callback: () => self.selectCameraByOffset(-1),
 		},
 	}
 }

@@ -31,6 +31,33 @@ export const VariableDefinitions = {
 	rom_version: { name: 'ROM version' },
 }
 
+/**
+ * Variables of the connection: the values of the selected camera without prefix,
+ * the values of each camera with the prefix cam<number>_.
+ *
+ * @param {number[]} cameraNumbers
+ * @returns {Record<string, { name: string }>}
+ */
+export function getVariableDefinitions(cameraNumbers) {
+	return {
+		selected_camera: { name: 'Number of the selected camera' },
+		selected_camera_name: { name: 'Name of the selected camera' },
+		...Object.fromEntries(
+			Object.entries(VariableDefinitions).map(([id, { name }]) => [id, { name: `${name} (selected camera)` }]),
+		),
+		...SpeedVariableDefinitions,
+		...Object.fromEntries(
+			cameraNumbers.flatMap((number) => [
+				[`cam${number}_name`, { name: `Camera ${number}: name` }],
+				...Object.entries(VariableDefinitions).map(([id, { name }]) => [
+					`cam${number}_${id}`,
+					{ name: `Camera ${number}: ${name}` },
+				]),
+			]),
+		),
+	}
+}
+
 export const SpeedVariableDefinitions = {
 	pan_speed: { name: 'Pan speed of the module speed actions' },
 	tilt_speed: { name: 'Tilt speed of the module speed actions' },

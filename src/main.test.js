@@ -71,6 +71,7 @@ function createInstance() {
 		setPresetDefinitions: (structure, presets) => Object.assign(host, { structure, presets }),
 		setVariableValues: (values) => Object.assign(host.variables, values),
 		checkFeedbacks: (ids) => ids.forEach((id) => host.checkedFeedbacks.add(id)),
+		checkAllFeedbacks: () => host.checkedFeedbacks.add('*'),
 		updateStatus: (status, message) => host.statuses.push([status, message]),
 	}
 	return { instance: new MarshallViscaInstance(context), host }
@@ -190,5 +191,81 @@ test('stays connected with a camera that reuses the latest sequence number', asy
 	} finally {
 		await instance.destroy()
 		server.close()
+	}
+})
+
+test('controls several cameras and selects them by number', async () => {
+	const camera1 = await startFakeCamera()
+	const camera2 = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({
+			camera_count: 3,
+			host: '127.0.0.1',
+			name: 'Left',
+			host_2: '127.0.0.1',
+			name_2: 'Right',
+			// Camera 3 has no host and is skipped
+			port: camera1.port,
+			poll_interval: 0,
+		})
+		// Both cameras share the port setting, so camera 2 is moved to its own fake camera
+		instance.cameras[1].options.port = camera2.port
+		instance.cameras[1].connect()
+		await sleep(100)
+
+		assert.deepStrictEqual(
+			instance.cameras.map((camera) => camera.number),
+			[1, 2],
+		)
+		assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.Ok)
+		assert.strictEqual(host.variables.selected_camera, 1)
+		assert.strictEqual(host.variables.cam2_name, 'Right')
+
+		const isCommand = (message) => message.startsWith('0100')
+		await host.actions.zoom_stop.callback({ options: { camera: 0 } })
+		await host.actions.camera_select.callback({ options: { camera: 2 } })
+		assert.strictEqual(host.variables.selected_camera_name, 'Right')
+		assert.strictEqual(host.feedbacks.camera_selected.callback({ options: { camera: 2 } }), true)
+		await host.actions.zoom_stop.callback({ options: { camera: 0 } })
+		await host.actions.zoom_stop.callback({ options: { camera: 1 } })
+		await host.actions.preset_recall.callback({ options: { preset: 4, camera: 0 } })
+		await sleep(50)
+		assert.strictEqual(camera1.received.filter(isCommand).length, 2)
+		assert.strictEqual(camera2.received.filter(isCommand).length, 2)
+
+		// Variables without prefix follow the selected camera, the prefixed ones each camera
+		assert.strictEqual(host.variables.cam2_last_preset, 4)
+		assert.strictEqual(host.variables.last_preset, 4)
+		assert.strictEqual(host.feedbacks.preset_active.callback({ options: { preset: 4, camera: 0 } }), true)
+		assert.strictEqual(host.feedbacks.preset_active.callback({ options: { preset: 4, camera: 1 } }), false)
+		await host.actions.camera_select_next.callback({ options: {} })
+		assert.strictEqual(host.variables.selected_camera, 1)
+		assert.strictEqual(host.variables.last_preset, '')
+	} finally {
+		await instance.destroy()
+		camera1.server.close()
+		camera2.server.close()
+	}
+})
+
+test('reports a warning when only some cameras are reachable', async () => {
+	const camera1 = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({
+			camera_count: 2,
+			host: '127.0.0.1',
+			host_2: 'not a host!',
+			port: camera1.port,
+			poll_interval: 0,
+		})
+		await sleep(100)
+		const [status, message] = host.statuses.at(-1)
+		assert.strictEqual(status, InstanceStatus.UnknownWarning)
+		assert.match(message, /Camera 2/)
+	} finally {
+		await instance.destroy()
+		camera1.server.close()
 	}
 })

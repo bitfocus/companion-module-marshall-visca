@@ -1,82 +1,108 @@
 // @ts-check
-import { lookup } from 'node:dns/promises'
-import net from 'node:net'
 import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
-import MarshallCamera, { Protocols } from '../visca/lib/Marshall/MarshallCamera.js'
-import commands, { inquiries } from '../visca/lib/Marshall/commands.js'
+import { Protocols } from '../visca/lib/Marshall/MarshallCamera.js'
 import { getActionDefinitions } from './actions.js'
-import { getModel, Models } from './models.js'
+import { CameraConnection } from './camera-connection.js'
+import { getModel, Models, combineModels } from './models.js'
 import { getPresetDefinitions } from './presets.js'
 import { FeedbacksByVariable, getFeedbackDefinitions } from './feedbacks.js'
-import { InquiryVariables, PolledInquiries, SpeedVariableDefinitions, VariableDefinitions } from './variables.js'
+import { getVariableDefinitions } from './variables.js'
 import { UpgradeScripts } from './upgrades.js'
 
 export { UpgradeScripts }
 
-const RECONNECT_INTERVAL = 5000
-const POLL_AFTER_COMMAND_DELAY = 300
+export const MAX_CAMERAS = 8
 const DEFAULT_SPEED = { pan: 12, tilt: 10, zoom: 4 }
-
-const isTimeout = (reason) => reason instanceof Error && /Timeout|did not answer/.test(reason.message)
-const isUnsupported = (reason) => /^Syntax Error/.test(reason?.packet?.name ?? '')
-const reasonToMessage = (reason) =>
-	reason instanceof Error ? reason.message : (reason?.packet?.name ?? String(reason))
 
 /**
  * @typedef {{ pan: number, tilt: number, zoom: number }} Speed
+ * @typedef {import('./camera-connection.js').CameraState} CameraState
  */
+
+/**
+ * Config field ids of a camera. Camera 1 keeps the ids of the single camera version.
+ *
+ * @param {number} number
+ */
+const cameraConfigIds = (number) =>
+	number === 1
+		? { name: 'name', host: 'host', model: 'model' }
+		: { name: `name_${number}`, host: `host_${number}`, model: `model_${number}` }
 
 export default class MarshallViscaInstance extends InstanceBase {
 	/** @type {Record<string, any>} */
 	config = {}
-	/** @type {Record<string, import('@companion-module/base').JsonValue>} Current variable values */
-	state = {}
 	/** @type {Speed} */
 	speed = { ...DEFAULT_SPEED }
-	/** @type {import('./models.js').Model} */
+	/** @type {CameraConnection[]} Configured cameras */
+	cameras = []
+	/** Number of the camera that actions without explicit camera control */
+	selectedCamera = 1
+	/** @type {import('./models.js').Model} Limits the values offered in actions */
 	model = getModel(undefined)
-	/** @type {MarshallCamera | undefined} */
-	camera = undefined
-	/** @type {Set<string>} Inquiries that the camera supports */
-	polledInquiries = new Set()
-	/** @type {NodeJS.Timeout | undefined} */
-	reconnectTimer = undefined
-	/** @type {NodeJS.Timeout | undefined} */
-	pollTimer = undefined
-	/** @type {NodeJS.Timeout | undefined} */
-	pollSoonTimer = undefined
-	polling = false
-	connectGeneration = 0
 
 	async init(config) {
-		this.config = config
-		this.state = Object.fromEntries(Object.keys(VariableDefinitions).map((id) => [id, '']))
 		this.speed = { ...DEFAULT_SPEED }
-		this.model = getModel(config.model)
-
-		this.setActionDefinitions(getActionDefinitions(this))
-		this.setFeedbackDefinitions(getFeedbackDefinitions(this.state))
-		this.setVariableDefinitions({ ...VariableDefinitions, ...SpeedVariableDefinitions })
-		const { structure, presets } = getPresetDefinitions(this.label)
-		this.setPresetDefinitions(structure, presets)
-		this.setVariableValues(this.state)
-		this.setSpeed(this.speed)
-
-		this.connect()
+		this.setFeedbackDefinitions(getFeedbackDefinitions(this))
+		await this.configUpdated(config)
 	}
 
 	async destroy() {
-		this.disconnect()
+		for (const camera of this.cameras) {
+			camera.disconnect()
+		}
+		this.cameras = []
 	}
 
 	async configUpdated(config) {
 		this.config = config
-		const model = getModel(config.model)
-		if (model !== this.model) {
-			this.model = model
-			this.setActionDefinitions(getActionDefinitions(this))
+		await this.destroy()
+
+		const count = Math.min(MAX_CAMERAS, Math.max(1, Math.round(Number(config.camera_count) || 1)))
+		for (let number = 1; number <= count; number++) {
+			const ids = cameraConfigIds(number)
+			const host = String(config[ids.host] ?? '').trim()
+			// Cameras without host are skipped, except camera 1 which reports the missing config
+			if (!host && number > 1) continue
+			this.cameras.push(
+				new CameraConnection({
+					number,
+					name: String(config[ids.name] ?? '').trim() || `Camera ${number}`,
+					host,
+					model: getModel(config[ids.model]),
+					port: Number(config.port) || 52381,
+					protocol: config.protocol,
+					pollInterval: Number(config.poll_interval ?? 2) * 1000,
+					log: (level, message) => this.log(level, message),
+					onStatus: () => this.updateCombinedStatus(),
+					onStateChange: (camera, changed) => this.cameraStateChanged(camera, changed),
+				}),
+			)
 		}
-		this.connect()
+		if (!this.getCamera(this.selectedCamera)) {
+			this.selectedCamera = this.cameras[0].number
+		}
+
+		this.model = combineModels(this.cameras.map((camera) => camera.model))
+		this.setActionDefinitions(getActionDefinitions(this))
+		this.setVariableDefinitions(getVariableDefinitions(this.cameras.map((camera) => camera.number)))
+		const { structure, presets } = getPresetDefinitions(this.label, this.cameras)
+		this.setPresetDefinitions(structure, presets)
+
+		this.setSpeed(this.speed)
+		this.setVariableValues(
+			Object.fromEntries(
+				this.cameras.flatMap((camera) => [
+					[`cam${camera.number}_name`, camera.name],
+					...Object.entries(camera.state).map(([id, value]) => [`cam${camera.number}_${id}`, value]),
+				]),
+			),
+		)
+		this.selectCamera(this.selectedCamera)
+
+		for (const camera of this.cameras) {
+			camera.connect()
+		}
 	}
 
 	/**
@@ -89,14 +115,18 @@ export default class MarshallViscaInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value: 'Controls Marshall CV cameras with VISCA. Enable VISCA over IP in the network settings of the camera.',
+				value:
+					'Controls one or more Marshall CV cameras with VISCA. Enable VISCA over IP in the network settings of the cameras. Actions control the selected camera unless a camera number is set in the action.',
 			},
 			{
-				type: 'textinput',
-				id: 'host',
-				label: 'Camera IP or hostname',
-				width: 8,
-				regex: Regex.HOSTNAME,
+				type: 'number',
+				id: 'camera_count',
+				label: 'Number of cameras',
+				width: 4,
+				min: 1,
+				max: MAX_CAMERAS,
+				default: 1,
+				asInteger: true,
 			},
 			{
 				type: 'number',
@@ -109,29 +139,6 @@ export default class MarshallViscaInstance extends InstanceBase {
 				asInteger: true,
 			},
 			{
-				type: 'dropdown',
-				id: 'protocol',
-				label: 'Protocol',
-				description:
-					'VISCA over IP is the default of Marshall cameras. Raw VISCA sends one command at a time, use it only if the camera requires it.',
-				width: 6,
-				choices: [
-					{ id: Protocols.VISCA_OVER_IP, label: 'VISCA over IP (UDP, default port 52381)' },
-					{ id: Protocols.RAW_TCP, label: 'Raw VISCA over TCP' },
-					{ id: Protocols.RAW_UDP, label: 'Raw VISCA over UDP' },
-				],
-				default: Protocols.VISCA_OVER_IP,
-			},
-			{
-				type: 'dropdown',
-				id: 'model',
-				label: 'Model',
-				description: 'Hides values the model does not support (e.g. UHD resolutions)',
-				width: 6,
-				choices: Models.map(({ id, label }) => ({ id, label })),
-				default: Models[0].id,
-			},
-			{
 				type: 'number',
 				id: 'poll_interval',
 				label: 'Status polling interval (s)',
@@ -142,143 +149,121 @@ export default class MarshallViscaInstance extends InstanceBase {
 				default: 2,
 				step: 0.5,
 			},
+			{
+				type: 'dropdown',
+				id: 'protocol',
+				label: 'Protocol',
+				description:
+					'VISCA over IP is the default of Marshall cameras. Raw VISCA sends one command at a time, use it only if the cameras require it.',
+				width: 12,
+				choices: [
+					{ id: Protocols.VISCA_OVER_IP, label: 'VISCA over IP (UDP, default port 52381)' },
+					{ id: Protocols.RAW_TCP, label: 'Raw VISCA over TCP' },
+					{ id: Protocols.RAW_UDP, label: 'Raw VISCA over UDP' },
+				],
+				default: Protocols.VISCA_OVER_IP,
+			},
+			...Array.from({ length: MAX_CAMERAS }, (_, idx) => idx + 1).flatMap((number) => {
+				const ids = cameraConfigIds(number)
+				const isVisibleExpression = number > 1 ? `$(options:camera_count) >= ${number}` : undefined
+				/** @type {import('@companion-module/base').SomeCompanionConfigField[]} */
+				const fields = [
+					{
+						type: 'textinput',
+						id: ids.name,
+						label: `Camera ${number} name`,
+						width: 3,
+						default: `Camera ${number}`,
+						isVisibleExpression,
+					},
+					{
+						type: 'textinput',
+						id: ids.host,
+						label: `Camera ${number} IP or hostname`,
+						width: 4,
+						regex: Regex.HOSTNAME,
+						isVisibleExpression,
+					},
+					{
+						type: 'dropdown',
+						id: ids.model,
+						label: `Camera ${number} model`,
+						description: number === 1 ? 'Hides values the model does not support (e.g. UHD resolutions)' : undefined,
+						width: 5,
+						choices: Models.map(({ id, label }) => ({ id, label })),
+						default: Models[0].id,
+						isVisibleExpression,
+					},
+				]
+				return fields
+			}),
 		]
 	}
 
-	async connect() {
-		this.disconnect()
-		const generation = this.connectGeneration
-
-		const host = String(this.config.host ?? '').trim()
-		if (!host || !new RegExp(Regex.HOSTNAME.slice(1, -1)).test(host)) {
-			this.updateStatus(InstanceStatus.BadConfig, 'Camera IP or hostname missing or invalid')
-			return
-		}
-
-		this.updateStatus(InstanceStatus.Connecting)
-
-		// Replies are matched by IP address, so hostnames are resolved first
-		let ip = host
-		if (!net.isIPv4(host)) {
-			try {
-				ip = (await lookup(host, { family: 4 })).address
-			} catch (error) {
-				if (generation !== this.connectGeneration) return
-				this.updateStatus(InstanceStatus.ConnectionFailure, `Cannot resolve ${host}: ${error.message}`)
-				this.reconnectTimer = setTimeout(() => this.connect(), RECONNECT_INTERVAL)
-				return
-			}
-			if (generation !== this.connectGeneration) return
-		}
-
-		const camera = new MarshallCamera(ip, {
-			port: Number(this.config.port) || 52381,
-			protocol: Object.values(Protocols).includes(this.config.protocol) ? this.config.protocol : undefined,
-		})
-		camera.on('error', (error) => this.log('debug', `VISCA: ${error.message}`))
-		camera.connection.on('debug', (message) => this.log('debug', message))
-		this.camera = camera
-		this.polledInquiries = new Set(PolledInquiries)
-
-		this.checkConnection()
-	}
-
-	disconnect() {
-		// Invalidates a pending hostname lookup of connect()
-		this.connectGeneration++
-		clearTimeout(this.reconnectTimer)
-		this.reconnectTimer = undefined
-		this.stopPolling()
-		if (this.camera) {
-			this.camera.close()
-			this.camera = undefined
-		}
-	}
-
-	checkConnection() {
-		const camera = this.camera
-		clearTimeout(this.reconnectTimer)
-		this.reconnectTimer = undefined
-		this.stopPolling()
-		if (!camera) return
-
-		camera.connect().then(
-			() => {
-				if (camera !== this.camera) return
-				this.updateStatus(InstanceStatus.Ok)
-				this.inquire('version')
-				this.startPolling()
-			},
-			(error) => {
-				if (camera !== this.camera) return
-				this.connectionFailed(error.message)
-			},
-		)
-	}
-
-	connectionFailed(message) {
-		if (this.reconnectTimer) return
-		this.stopPolling()
-		this.updateStatus(InstanceStatus.ConnectionFailure, message)
-		this.reconnectTimer = setTimeout(() => this.checkConnection(), RECONNECT_INTERVAL)
-	}
-
-	startPolling() {
-		this.stopPolling()
-		const interval = Number(this.config.poll_interval) * 1000
-		if (interval > 0) {
-			this.pollTimer = setInterval(() => this.poll(), interval)
-			this.poll()
-		}
-	}
-
-	stopPolling() {
-		clearInterval(this.pollTimer)
-		clearTimeout(this.pollSoonTimer)
-		this.pollTimer = undefined
-		this.pollSoonTimer = undefined
+	/**
+	 * @param {number | undefined} number  Camera number, 0 or invalid for the selected camera
+	 * @returns {CameraConnection | undefined}
+	 */
+	getCamera(number) {
+		const wanted = Math.round(Number(number)) > 0 ? Math.round(Number(number)) : this.selectedCamera
+		return this.cameras.find((camera) => camera.number === wanted)
 	}
 
 	/**
-	 * Polls once shortly after a command, so that variables follow changes quickly.
+	 * @param {number | undefined} number  Camera number, 0 for the selected camera
+	 * @returns {CameraState}
 	 */
-	pollSoon() {
-		if (!this.pollTimer) return
-		clearTimeout(this.pollSoonTimer)
-		this.pollSoonTimer = setTimeout(() => this.poll(), POLL_AFTER_COMMAND_DELAY)
+	getCameraState(number) {
+		return this.getCamera(number)?.state ?? {}
 	}
 
-	async poll() {
-		if (this.polling) return
-		this.polling = true
-		try {
-			await Promise.all([...this.polledInquiries].map((key) => this.inquire(key)))
-		} finally {
-			this.polling = false
-		}
+	/**
+	 * @param {number | undefined} number  Camera number, 0 for the selected camera
+	 * @param {Record<string, any>} values
+	 */
+	updateCameraState(number, values) {
+		this.getCamera(number)?.updateState(values)
 	}
 
-	async inquire(key) {
-		const camera = this.camera
-		if (!camera) return
-		try {
-			const answer = await camera.sendInquiry(inquiries[key]).answer
-			if (camera !== this.camera) return
-			this.updateState(InquiryVariables[key](answer))
-			if (key === 'power') this.updateStatus(InstanceStatus.Ok)
-		} catch (reason) {
-			if (camera !== this.camera) return
-			if (isTimeout(reason)) {
-				// The power inquiry is the keepalive, other inquiries time out at the same time
-				if (key === 'power') this.connectionFailed(reasonToMessage(reason))
-			} else if (isUnsupported(reason) && this.polledInquiries.delete(key)) {
-				// 'Command not executable' (e.g. in standby) is temporary, a syntax error is not
-				this.log(
-					'debug',
-					`Inquiry "${inquiries[key].name}" is not supported and no longer polled: ${reasonToMessage(reason)}`,
-				)
-			}
+	/**
+	 * Selects the camera that actions control when they do not set a camera.
+	 *
+	 * @param {number} number
+	 * @returns {boolean}  Whether the camera exists
+	 */
+	selectCamera(number) {
+		const camera = this.cameras.find((camera) => camera.number === Math.round(Number(number)))
+		if (!camera) {
+			this.log('warn', `Camera ${number} is not configured`)
+			return false
 		}
+		this.selectedCamera = camera.number
+		this.setVariableValues({ selected_camera: camera.number, selected_camera_name: camera.name, ...camera.state })
+		this.checkAllFeedbacks()
+		return true
+	}
+
+	/**
+	 * @param {number} offset  +1 for the next camera, -1 for the previous one, wraps around
+	 */
+	selectCameraByOffset(offset) {
+		const idx = this.cameras.findIndex((camera) => camera.number === this.selectedCamera)
+		const next = this.cameras[(idx + offset + this.cameras.length * 2) % this.cameras.length]
+		this.selectCamera(next.number)
+	}
+
+	/**
+	 * @param {any} command  Command of the VISCA library
+	 * @param {Record<string, any>} parameterDict
+	 * @param {number} [cameraNumber]  0 or undefined for the selected camera
+	 */
+	sendCommand(command, parameterDict, cameraNumber) {
+		const camera = this.getCamera(cameraNumber)
+		if (!camera) {
+			this.log('warn', `Cannot send "${command.name}": camera ${cameraNumber} is not configured`)
+			return
+		}
+		camera.sendCommand(command, parameterDict)
 	}
 
 	/**
@@ -290,64 +275,44 @@ export default class MarshallViscaInstance extends InstanceBase {
 	}
 
 	/**
-	 * Sets variable values and checks the feedbacks that depend on changed values.
-	 *
-	 * @param {Record<string, import('@companion-module/base').JsonValue | undefined>} values
+	 * @param {CameraConnection} camera
+	 * @param {CameraState} changed
 	 */
-	updateState(values) {
-		const changed = {}
-		for (const [id, value] of Object.entries(values)) {
-			if (value !== undefined && this.state[id] !== value) {
-				this.state[id] = value
-				changed[id] = value
-			}
+	cameraStateChanged(camera, changed) {
+		/** @type {CameraState} */
+		const values = Object.fromEntries(
+			Object.entries(changed).map(([id, value]) => [`cam${camera.number}_${id}`, value]),
+		)
+		if (camera.number === this.selectedCamera) {
+			Object.assign(values, changed)
 		}
-		const ids = Object.keys(changed)
-		if (!ids.length) return
+		this.setVariableValues(values)
 
-		this.setVariableValues(changed)
-		const feedbacks = new Set(ids.flatMap((id) => FeedbacksByVariable[id] ?? []))
+		const feedbacks = new Set(Object.keys(changed).flatMap((id) => FeedbacksByVariable[id] ?? []))
 		const [first, ...rest] = feedbacks
 		if (first) this.checkFeedbacks(first, ...rest)
 	}
 
-	sendCommand(command, parameterDict) {
-		const camera = this.camera
-		if (!camera) {
-			this.log('warn', `Cannot send "${command.name}": camera is not configured`)
-			return
-		}
-
-		let request
-		try {
-			request = camera.sendCommand(command, parameterDict)
-		} catch (error) {
-			this.log('error', `Cannot send "${command.name}": ${error.message}`)
-			return
-		}
-
-		// Do not block the action on the completion, a preset recall can take several seconds
-		request.completion.then(
-			() => {
-				if (camera !== this.camera) return
-				this.updateStatus(InstanceStatus.Ok)
-				if (command === commands['preset/recall'] || command === commands['preset/set']) {
-					this.updateState({ last_preset: parameterDict['Preset'] })
-				}
-				this.pollSoon()
-			},
-			(reason) => {
-				if (camera !== this.camera) return
-				const message = reasonToMessage(reason)
-				this.log('warn', `Command "${command.familyName ?? ''} ${command.name}" failed: ${message}`)
-				if (isTimeout(reason)) {
-					this.connectionFailed(message)
-				}
-			},
+	/**
+	 * Combines the status of all cameras into the status of the connection.
+	 */
+	updateCombinedStatus() {
+		const failed = this.cameras.filter((camera) =>
+			[InstanceStatus.ConnectionFailure, InstanceStatus.BadConfig].includes(camera.status),
 		)
+		const message = failed.map((camera) => `${camera.label}: ${camera.statusMessage}`).join(', ') || null
 
-		if (command.familyName === 'Pan Tilt' && command.name !== 'Stop') {
-			this.updateState({ last_preset: '' })
+		if (this.cameras.length === 1) {
+			const [camera] = this.cameras
+			this.updateStatus(camera.status, camera.statusMessage)
+		} else if (failed.length === this.cameras.length) {
+			this.updateStatus(InstanceStatus.ConnectionFailure, message)
+		} else if (failed.length) {
+			this.updateStatus(InstanceStatus.UnknownWarning, message)
+		} else if (this.cameras.some((camera) => camera.status === InstanceStatus.Connecting)) {
+			this.updateStatus(InstanceStatus.Connecting)
+		} else {
+			this.updateStatus(InstanceStatus.Ok)
 		}
 	}
 }

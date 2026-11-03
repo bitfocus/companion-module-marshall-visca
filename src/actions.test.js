@@ -9,11 +9,15 @@ function createSelf(model) {
 		logs: [],
 		model,
 		speed: { pan: 12, tilt: 10, zoom: 4 },
-		sendCommand: (command, parameterDict) => self.sent.push({ command, parameterDict }),
+		sendCommand: (command, parameterDict, camera) => self.sent.push({ command, parameterDict, camera }),
 		setSpeed: (speed) => (self.speed = speed),
 		log: (level, message) => self.logs.push([level, message]),
 		state: {},
-		updateState: (values) => Object.assign(self.state, values),
+		cameras: [],
+		getCameraState: (camera) => self.state,
+		updateCameraState: (camera, values) => Object.assign(self.state, values),
+		selectCamera: (camera) => self.cameras.push(camera) > 0,
+		selectCameraByOffset: (offset) => self.cameras.push(offset > 0 ? 'next' : 'previous'),
 	}
 	return self
 }
@@ -108,4 +112,20 @@ test('image adjust steps color gain and hue from the current value', () => {
 	assert.strictEqual(self.sent.at(-1).command.name, 'Hue')
 	assert.deepStrictEqual(self.sent.at(-1).parameterDict, { Hue: 5 })
 	assert.strictEqual(self.state.hue, 5)
+})
+
+test('actions pass the camera option and select cameras', () => {
+	const self = createSelf()
+	const actions = getActionDefinitions(self)
+	assert.ok(actions.zoom_stop.options.some((option) => option.id === 'camera'))
+	actions.zoom_stop.callback({ options: { camera: 2 } })
+	actions.pan_tilt_move.callback({ options: { direction: 'Up', camera: 0 } })
+	assert.deepStrictEqual(
+		self.sent.map(({ camera }) => camera),
+		[2, 0],
+	)
+
+	actions.camera_select.callback({ options: { camera: '3' } })
+	actions.camera_select_next.callback({ options: {} })
+	assert.deepStrictEqual(self.cameras, [3, 'next'])
 })
