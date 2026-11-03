@@ -1,10 +1,8 @@
-import { AbstractViscaSocket, OpenViscaSocket } from './ViscaSocket.js'
+import { AbstractViscaSocket, OpenViscaSocket, ReplyRouter } from './ViscaSocket.js'
 
 /**
  * Plain VISCA without the VISCA over IP header (e.g. over TCP or UDP).
- *
- * Replies carry no sequence number, so only one message may be in flight:
- * use it with a ViscaCamera with nSockets = 1.
+ * Replies carry no sequence number, they are assigned by the ReplyRouter.
  */
 class RawViscaSocket extends AbstractViscaSocket {
 	constructor(connection, connectTimeout = 2000) {
@@ -12,7 +10,7 @@ class RawViscaSocket extends AbstractViscaSocket {
 		this.connection = connection
 		this.connectTimeout = connectTimeout
 		this._buffer = []
-		this._openViscaSocket = undefined
+		this.replyRouter = new ReplyRouter()
 
 		connection.on('message', this._receive.bind(this))
 		connection.on('error', (error) => this.emit('error', error))
@@ -24,9 +22,8 @@ class RawViscaSocket extends AbstractViscaSocket {
 		}
 		const payload = message.getFinalPayload()
 
-		this._openViscaSocket?.close(new Error('New message sent before the previous one was finished'))
 		const openViscaSocket = new OpenViscaSocket()
-		this._openViscaSocket = openViscaSocket
+		this.replyRouter.add(openViscaSocket)
 		this.connection.send(payload)
 
 		return openViscaSocket
@@ -53,7 +50,7 @@ class RawViscaSocket extends AbstractViscaSocket {
 	}
 
 	close() {
-		this._openViscaSocket?.close(new Error('Connection closed'))
+		this.replyRouter.close(new Error('Connection closed'))
 		this.connection.close()
 	}
 
@@ -63,8 +60,8 @@ class RawViscaSocket extends AbstractViscaSocket {
 		let end
 		while ((end = this._buffer.indexOf(0xff)) !== -1) {
 			const payload = this._buffer.splice(0, end + 1)
-			if (this._openViscaSocket && !this._openViscaSocket.closed) {
-				this._openViscaSocket.incoming(payload)
+			if (!this.replyRouter.route(payload)) {
+				this.emit('debug', `Ignored unexpected reply: ${Buffer.from(payload).toString('hex').toUpperCase()}`)
 			}
 		}
 	}

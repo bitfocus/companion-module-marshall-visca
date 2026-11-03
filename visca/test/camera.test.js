@@ -156,11 +156,89 @@ test('commands go ahead of queued inquiries', async () => {
 		const requests = [1, 2, 3, 4].map(() => camera.sendInquiry(inquiries['power']))
 		requests.push(camera.sendCommand(commands['zoom/stop'], {}))
 		await Promise.all(requests.map((request) => request.completion))
-		// 2 inquiries are already in flight, the command is sent next
+		// 1 inquiry is already in flight, the command is sent next
 		assert.deepStrictEqual(
 			received.slice(1).map((message) => message[1]),
-			[0x10, 0x10, 0x00, 0x10, 0x10],
+			[0x10, 0x00, 0x10, 0x10, 0x10],
 		)
+	} finally {
+		camera.close()
+		server.close()
+	}
+})
+
+/**
+ * Behaves like the Marshall camera from the field test: every reply carries the sequence number
+ * that was received last, not the one of the request. Inquiries are answered after a delay, the
+ * preset recall completes after a longer one.
+ */
+async function startCameraWithLatestSequenceNumber() {
+	const server = dgram.createSocket('udp4')
+	let latest = [0, 0, 0, 0]
+	server.on('message', (msg, rinfo) => {
+		latest = [...msg.subarray(4, 8)]
+		const reply = (type, payload, delay) =>
+			setTimeout(
+				() =>
+					server.send(Buffer.from([...type, 0x00, payload.length, ...latest, ...payload]), rinfo.port, rinfo.address),
+				delay,
+			)
+		const payload = msg.subarray(8).toString('hex')
+		if (msg[0] === 0x02) {
+			reply([0x02, 0x01], [0x01], 0)
+		} else if (payload === '81090400ff') {
+			reply([0x01, 0x11], [0x90, 0x50, 0x02, 0xff], 5)
+		} else if (payload === '81090002ff') {
+			reply([0x01, 0x11], [0x90, 0x50, 0x02, 0x20, 0x04, 0x30, 0x11, 0x00, 0x0d, 0xff], 5)
+		} else if (payload.startsWith('8101043f02')) {
+			reply([0x01, 0x11], [0x90, 0x41, 0xff], 2)
+			reply([0x01, 0x11], [0x90, 0x51, 0xff], 60)
+		} else {
+			reply([0x01, 0x11], [0x90, 0x42, 0xff], 2)
+			reply([0x01, 0x11], [0x90, 0x52, 0xff], 4)
+		}
+	})
+	await new Promise((resolve) => server.bind(0, '127.0.0.1', resolve))
+	return { server, port: server.address().port }
+}
+
+test('assigns replies when the camera reuses the latest sequence number', async () => {
+	const { server, port } = await startCameraWithLatestSequenceNumber()
+	const camera = new MarshallCamera('127.0.0.1', { port })
+	camera.on('error', (error) => assert.fail(error))
+	try {
+		await camera.connect()
+		const version = camera.sendInquiry(inquiries['version'])
+		const power = camera.sendInquiry(inquiries['power'])
+		assert.deepStrictEqual(await version.answer, {
+			'Vendor ID': '0220',
+			'Model ID': '0430',
+			'ROM Version': '1100',
+			'Maximum Socket': 0x0d,
+		})
+		assert.deepStrictEqual(await power.answer, { 'Power Mode': 'On' })
+	} finally {
+		camera.close()
+		server.close()
+	}
+})
+
+test('routes the completion of a running command by its socket number', async () => {
+	const { server, port } = await startCameraWithLatestSequenceNumber()
+	const camera = new MarshallCamera('127.0.0.1', { port })
+	camera.on('error', (error) => assert.fail(error))
+	try {
+		await camera.connect()
+		const recall = camera.sendCommand(commands['preset/recall'], { Preset: 1 })
+		await recall.ack
+		// Sent while the preset recall is still moving, all replies carry the latest sequence number
+		const inquiry = camera.sendInquiry(inquiries['power'])
+		const stop = camera.sendCommand(commands['zoom/stop'], {})
+		assert.deepStrictEqual(await inquiry.answer, { 'Power Mode': 'On' })
+		await stop.completion
+		const completion = await recall.completion
+		assert.strictEqual(completion.packet.name, 'Completion')
+		assert.strictEqual(completion.parameterDict.Socket, 1)
 	} finally {
 		camera.close()
 		server.close()

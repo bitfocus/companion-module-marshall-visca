@@ -35,6 +35,75 @@ class AbstractViscaSocket extends EventEmitter {
 	close() {}
 }
 
+/**
+ * Assigns VISCA replies to the waiting requests by their content.
+ *
+ * Sequence numbers (VISCA over IP) are not reliable: some cameras stamp every reply with the
+ * sequence number they received last. Raw VISCA has none at all. Instead:
+ * - Only one message waits for its first reply (ack, answer or error) at a time,
+ *   so the first reply always belongs to it.
+ * - An ack (x0 4Y FF) assigns socket Y to the command, its completion (x0 5Y FF) or
+ *   error (x0 6Y .. FF) is routed by that socket number while other messages are sent.
+ */
+class ReplyRouter {
+	constructor() {
+		this._awaitingFirstReply = undefined
+		this._executing = new Map()
+	}
+
+	/**
+	 * @param {OpenViscaSocket} openViscaSocket  Socket of a message that was just sent.
+	 */
+	add(openViscaSocket) {
+		this._awaitingFirstReply?.close(new Error('New message sent before the previous one was answered'))
+		this._awaitingFirstReply = openViscaSocket
+		openViscaSocket.on('close', () => {
+			if (this._awaitingFirstReply === openViscaSocket) {
+				this._awaitingFirstReply = undefined
+			}
+			for (const [socket, executing] of this._executing) {
+				if (executing === openViscaSocket) {
+					this._executing.delete(socket)
+				}
+			}
+		})
+	}
+
+	/**
+	 * @returns {boolean}  Whether the payload was assigned to a socket.
+	 */
+	route(payload) {
+		const type = payload[1] & 0xf0
+		const socket = payload[1] & 0x0f
+
+		if ((type === 0x50 || type === 0x60) && socket > 0 && this._executing.has(socket)) {
+			const executing = this._executing.get(socket)
+			this._executing.delete(socket)
+			executing.incoming(payload)
+			return true
+		}
+
+		const awaiting = this._awaitingFirstReply
+		if (!awaiting) {
+			return false
+		}
+		this._awaitingFirstReply = undefined
+		if (type === 0x40 && socket > 0) {
+			this._executing.get(socket)?.close(new Error(`Socket ${socket} was reused by the camera`))
+			this._executing.set(socket, awaiting)
+		}
+		awaiting.incoming(payload)
+		return true
+	}
+
+	close(reason) {
+		this._awaitingFirstReply?.close(reason)
+		for (const executing of [...this._executing.values()]) {
+			executing.close(reason)
+		}
+	}
+}
+
 const PayloadTypes = Object.freeze({
 	VISCA_COMMAND: Symbol('VISCA command'),
 	VISCA_INQUERY: Symbol('VISCA inquery'),
@@ -64,9 +133,8 @@ const ViscaPacketPayloadTypeMapping = Object.freeze({
 })
 
 class ViscaOverIpSocket extends AbstractViscaSocket {
-	constructor(connection, address = 1, nSockets = 2, resetTimeout = 1000) {
+	constructor(connection, address = 1, resetTimeout = 1000) {
 		super()
-		this.nSockets = nSockets
 		this.address = address
 		this.resetTimeout = resetTimeout
 		this.connection = connection
@@ -76,14 +144,21 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 		this._sequenceNumber = undefined
 		this._sequenceNumberReset = undefined
 
+		// Control messages (sequence number reset) are assigned by sequence number, VISCA replies by the router
 		this.openViscaSockets = new Map()
+		this.replyRouter = new ReplyRouter()
 	}
 
 	async sendMessage(message) {
 		const sequenceNumber = await this._nextSequenceNumber()
 		const payloadType = ViscaPacketPayloadTypeMapping[message.command.type]
 		const payloadTypeBytes = PayloadTypeBytes[payloadType]
-		const openViscaSocket = await this._send(payloadTypeBytes, sequenceNumber, message.getFinalPayload())
+		const payload = message.getFinalPayload()
+
+		const openViscaSocket = new OpenViscaSocket()
+		// Register the socket before sending, so that a fast reply is not lost
+		this.replyRouter.add(openViscaSocket)
+		this._sendData(payloadTypeBytes, sequenceNumber, payload)
 		return openViscaSocket
 	}
 
@@ -97,17 +172,23 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 	}
 
 	close() {
-		for (const openViscaSocket of this.openViscaSockets.values()) {
+		for (const openViscaSocket of [...this.openViscaSockets.values()]) {
 			openViscaSocket.close(new Error('Connection closed'))
 		}
+		this.replyRouter.close(new Error('Connection closed'))
 		this.connection.close()
 	}
 
-	async _send(type, sequenceNumber, payload) {
-		let payloadLength = utils.uintToByteArray(payload.length, 2)
-		let byteSequenceNumber = utils.uintToByteArray(sequenceNumber, 4)
-		let dataArray = [...type, ...payloadLength, ...byteSequenceNumber, ...payload]
+	_sendData(type, sequenceNumber, payload) {
+		const payloadLength = utils.uintToByteArray(payload.length, 2)
+		const byteSequenceNumber = utils.uintToByteArray(sequenceNumber, 4)
+		this.connection.send([...type, ...payloadLength, ...byteSequenceNumber, ...payload])
+	}
 
+	/**
+	 * Sends a control message, its reply is assigned by the sequence number.
+	 */
+	async _sendControl(type, sequenceNumber, payload) {
 		if (this.openViscaSockets.has(sequenceNumber)) {
 			const oldOpenViscaSocket = this.openViscaSockets.get(sequenceNumber)
 			oldOpenViscaSocket.close(new Error('New message for same sequence number created'))
@@ -122,7 +203,7 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 		this.openViscaSockets.set(sequenceNumber, newOpenViscaSocket)
 
 		// Register the socket before sending, so that a fast reply is not lost
-		this.connection.send(dataArray)
+		this._sendData(type, sequenceNumber, payload)
 
 		return newOpenViscaSocket
 	}
@@ -133,12 +214,6 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 			return
 		}
 
-		const sequenceNumber = utils.byteArrayToUint(data.slice(4, 8))
-		const openViscaSocket = this.openViscaSockets.get(sequenceNumber)
-		if (!openViscaSocket) {
-			return
-		}
-
 		const payloadLength = utils.byteArrayToUint(data.slice(2, 4))
 		const payload = data.slice(8, 8 + payloadLength)
 		if (payload.length !== payloadLength) {
@@ -146,7 +221,13 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 			return
 		}
 
-		openViscaSocket.incoming(payload)
+		const isControlReply = data[0] === 0x02 && data[1] === 0x01
+		if (isControlReply) {
+			const sequenceNumber = utils.byteArrayToUint(data.slice(4, 8))
+			this.openViscaSockets.get(sequenceNumber)?.incoming(payload)
+		} else if (!this.replyRouter.route(payload)) {
+			this.emit('debug', `Ignored unexpected reply: ${utils.byteArrayToHexString(payload)}`)
+		}
 	}
 
 	async _nextSequenceNumber() {
@@ -164,7 +245,7 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 		const type = PayloadTypeBytes[PayloadTypes.CONTROL_COMMAND]
 		const sequenceNumber = 0
 		const payload = [0x01]
-		const openViscaSocket = await this._send(type, sequenceNumber, payload)
+		const openViscaSocket = await this._sendControl(type, sequenceNumber, payload)
 		try {
 			return await new Promise((resolve, reject) => {
 				if (openViscaSocket.closed) {
@@ -194,5 +275,5 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
 	}
 }
 
-export { AbstractViscaSocket, OpenViscaSocket, ViscaOverIpSocket }
+export { AbstractViscaSocket, OpenViscaSocket, ReplyRouter, ViscaOverIpSocket }
 export default ViscaOverIpSocket

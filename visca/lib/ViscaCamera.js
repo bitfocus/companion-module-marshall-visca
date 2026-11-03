@@ -3,20 +3,22 @@ import { ActionRequest, InquiryRequest } from './Request.js'
 
 class ViscaCamera extends EventEmitter {
 	/**
-	 * @param {ViscaOverIpSocket} viscaSocket
-	 * @param {number} [nSockets=2]               Number of command buffers of the camera, limits the requests in flight.
+	 * Sends one request at a time until its first reply (ack, answer or error), because replies are
+	 * assigned by order (see ReplyRouter). Commands then wait for their completion while the next
+	 * requests are sent; the camera itself rejects commands when its command buffers are full.
+	 *
+	 * @param {AbstractViscaSocket} viscaSocket
 	 * @param {object} [timeouts]
 	 * @param {number} [timeouts.ack=1000]        Time in ms to wait for the ack of a command or the answer of an inquiry.
 	 * @param {number} [timeouts.completion=30000] Time in ms to wait for the completion of a command.
 	 */
-	constructor(viscaSocket, nSockets = 2, { ack = 1000, completion = 30000 } = {}) {
+	constructor(viscaSocket, { ack = 1000, completion = 30000 } = {}) {
 		super()
 		this.viscaSocket = viscaSocket
-		this.nSockets = nSockets
 		this.timeouts = { ack, completion }
 
 		this._queue = []
-		this._nActiveRequests = 0
+		this._sending = false
 
 		this.viscaSocket.on('error', (error) => this.emit('error', error))
 	}
@@ -33,19 +35,35 @@ class ViscaCamera extends EventEmitter {
 	}
 
 	_processQueue() {
-		while (this._nActiveRequests < this.nSockets && this._queue.length) {
-			const request = this._queue.shift()
-			this._nActiveRequests++
-			this._sendRequest(request).finally(() => {
-				this._nActiveRequests--
-				this._processQueue()
-			})
+		if (this._sending || !this._queue.length) {
+			return
 		}
+		const request = this._queue.shift()
+		this._sending = true
+		let released = false
+		const release = () => {
+			if (released) return
+			released = true
+			this._sending = false
+			this._processQueue()
+		}
+		this._sendRequest(request, release).finally(release)
 	}
 
-	async _sendRequest(request) {
+	/**
+	 * @param {Request} request
+	 * @param {() => void} release  Called as soon as the next request may be sent.
+	 */
+	async _sendRequest(request, release) {
 		let openViscaSocket
-		let timer
+		const timers = new Set()
+		const withTimeout = (promise, ms, name) =>
+			new Promise((resolve, reject) => {
+				const timer = setTimeout(() => reject(new Error(`Timeout: no ${name} received after ${ms} ms`)), ms)
+				timers.add(timer)
+				promise.then(resolve, reject).finally(() => clearTimeout(timer))
+			})
+
 		try {
 			openViscaSocket = await this.viscaSocket.sendMessage(request)
 			request.confirmSent()
@@ -54,20 +72,17 @@ class ViscaCamera extends EventEmitter {
 				try {
 					request.receiveReply(payload)
 				} catch (error) {
-					// The reply belongs to this request (same sequence number), so it cannot succeed anymore
+					// The reply was assigned to this request, so it cannot succeed anymore
 					request.fail(error)
 					this.emit('error', error)
 				}
 			})
 			openViscaSocket.on('close', (reason) => request.fail(reason ?? new Error('Socket closed')))
 
-			const withTimeout = (promise, ms, name) =>
-				new Promise((resolve, reject) => {
-					timer = setTimeout(() => reject(new Error(`Timeout: no ${name} received after ${ms} ms`)), ms)
-					promise.then(resolve, reject).finally(() => clearTimeout(timer))
-				})
 			if (request instanceof ActionRequest) {
+				// The ack is also resolved when the completion arrives without ack
 				await withTimeout(request.ack, this.timeouts.ack, 'ack')
+				release()
 				await withTimeout(request.completion, this.timeouts.completion, 'completion')
 			} else {
 				await withTimeout(request.completion, this.timeouts.ack, 'answer')
@@ -75,7 +90,7 @@ class ViscaCamera extends EventEmitter {
 		} catch (error) {
 			request.fail(error)
 		} finally {
-			clearTimeout(timer)
+			timers.forEach((timer) => clearTimeout(timer))
 			if (openViscaSocket && !openViscaSocket.closed) {
 				openViscaSocket.close()
 			}

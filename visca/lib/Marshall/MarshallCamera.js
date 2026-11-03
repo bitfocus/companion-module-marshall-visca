@@ -2,7 +2,6 @@ import { Tcp, Udp } from '../Connection.js'
 import RawViscaSocket from '../RawViscaSocket.js'
 import ViscaOverIpSocket from '../ViscaSocket.js'
 import ViscaCamera from '../ViscaCamera.js'
-import { nSockets } from './lookupTables.js'
 
 export const Protocols = Object.freeze({
 	VISCA_OVER_IP: 'visca-over-ip',
@@ -32,14 +31,13 @@ class MarshallCamera extends ViscaCamera {
 				break
 			case Protocols.VISCA_OVER_IP:
 				connection = new Udp(ip, port)
-				viscaSocket = new ViscaOverIpSocket(connection, address, nSockets)
+				viscaSocket = new ViscaOverIpSocket(connection, address)
 				break
 			default:
 				throw new Error(`Unknown protocol: ${protocol}`)
 		}
 
-		// Without sequence numbers replies cannot be assigned to parallel requests
-		super(viscaSocket, viscaSocket instanceof RawViscaSocket ? 1 : nSockets, timeouts)
+		super(viscaSocket, timeouts)
 		this.address = address
 		this.connection = connection
 	}
