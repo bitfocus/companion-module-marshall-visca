@@ -21,7 +21,8 @@ VISCA over IP has to be enabled in the network settings of the camera.
 - **Preset**: recall, set and clear presets 0 to 127
 - **Zoom**, **Focus**, **Autofocus**, **Zoom and Focus**: movement, direct positions, auto/manual focus, one push
 - **Exposure**: AE mode, iris, shutter, gain, bright, exposure compensation, backlight, WDR
-- **Image**: aperture (sharpness), color gain, gamma, noise reduction, flip, mirror, defog, picture freeze
+- **Image**: aperture (sharpness), color gain (saturation), hue, gamma, noise reduction, flip, mirror, defog, picture freeze
+- **Image - Adjust Color Gain / Hue**: steps color gain or hue up/down, based on the polled value (VISCA has no up/down command for them)
 - **White Balance**: mode, one push trigger, red/blue gain
 - **Menu**: OSD menu on/off/toggle, navigate with _Pan Tilt - Drive_
 - **Power**, **Tally**, **Resolution**, **HDMI Output Range**, **Curve Tracking**, **Initialize Lens**
@@ -33,7 +34,7 @@ Not every model supports every command or value. The camera answers unsupported 
 
 ### Variables
 
-Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, focus/white balance/AE mode, the last recalled or stored preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
+Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, iris as F-number, focus/white balance/AE mode, red/blue gain, color gain, hue, aperture, exposure compensation, backlight, WDR, the last recalled or stored preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
 
 Values the camera does not report stay empty.
 
@@ -42,7 +43,14 @@ Values the camera does not report stay empty.
 - Power is on
 - Preset was recalled last
 - Focus mode, white balance mode, AE mode
+- Setting is on: backlight, WDR, exposure compensation
 
 ### Presets
 
-Pan/tilt arrows, zoom, speed up/down, power, focus and presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position.
+- Pan/tilt arrows, zoom, speed up/down, power, focus
+- Presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position
+- Exposure / Iris: AE modes, iris, shutter, gain, bright, exposure compensation, backlight, WDR
+- Color / White Balance: WB modes, one push trigger, red/blue gain, color gain, hue
+- Image: sharpness, picture freeze
+
+Up/down buttons show the current value. Iris, shutter and gain only change in the matching AE mode, red/blue gain only in white balance mode Manual.

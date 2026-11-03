@@ -8,7 +8,8 @@ Stand: November 2026.
 - Button‑Presets: Pan/Tilt, Zoom, Speed, Presets 0–15 (kurz drücken = abrufen, 2 s halten = speichern), Power, Fokus
 - Exposure: AE‑Modus, Iris (nutzt `irisPositionArray`), Shutter, Gain, Bright, Belichtungskorrektur, Backlight, WDR
 - Pan/Tilt: absolute und relative Position, Limits, Geschwindigkeit im Modul mit Speed‑Up/Down
-- Bild: Aperture (Schärfe), Color Gain (Sättigung), Gamma, Rauschunterdrückung, Flip, Mirror, Defog, Picture Freeze
+- Bild: Aperture (Schärfe), Color Gain (Sättigung), Hue, Gamma, Rauschunterdrückung, Flip, Mirror, Defog, Picture Freeze
+- Presets für Belichtung/Iris, Farbe/Weißabgleich und Bild mit Wertanzeige; Iris als Blendenwert
 - Modellauswahl: Full‑HD‑Modelle bieten keine UHD‑Auflösungen an
 - OSD‑Menü an/aus/umschalten, Navigation über _Pan Tilt - Drive_
 - Aktion „Custom VISCA Command“
@@ -27,7 +28,8 @@ Stand: November 2026.
    - Fokus‑Modus‑Abfrage liefert `04` (undokumentiert, wird als `Unknown (0x04)` angezeigt): Bedeutung klären
    - Wertebereiche: Presets 0–127, Shutter/Gain/Bright/Gamma
    - Pan/Tilt‑Positionsbereich für absolute/relative Positionen und Limits
-   - Codes für Bild, Exposure, Menü und Tally
+   - Codes für Bild, Exposure, Menü und Tally, Abfragen für Farbe/Exposure (Rot/Blau‑Gain, Color Gain, Hue, Aperture, Backlight, WDR)
+   - Iris‑Tabelle (`irisPositionArray`): stimmt der angezeigte Blendenwert mit dem Kameramenü überein?
    - Der Befehl `Zoom - Memory Mode` (`81 01 04 47 00 0p FF`) überschneidet sich mit `Zoom - Direct` und ist vermutlich falsch.
 2. **Preset‑Recall‑Geschwindigkeit.** Es gibt keinen dokumentierten Marshall‑Befehl. Sony nutzt `81 01 7E 01 0B pp FF`; das lässt sich bis zur Klärung über „Custom VISCA Command“ testen.
 3. **Fehlende Auflösungscodes**: 1080i sowie UHD60 beim CV730. Die Codes sind unbekannt.
