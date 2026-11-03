@@ -1,6 +1,6 @@
 # companion-module-marshall-visca
 
-Controls Marshall CV PTZ cameras (CV605, CV607, CV612, CV620, CV630, CV730) over VISCA (VISCA over IP or raw VISCA over TCP/UDP) with [Bitfocus Companion](https://bitfocus.io/companion).
+Controls one or more Marshall CV PTZ cameras (CV605, CV607, CV612, CV620, CV630, CV730) over VISCA (VISCA over IP or raw VISCA over TCP/UDP) with [Bitfocus Companion](https://bitfocus.io/companion).
 
 Requires Companion 5.1 or later (`@companion-module/base` 2.2). See [HELP.md](./companion/HELP.md) for usage and [ROADMAP.md](./ROADMAP.md) for planned features.
 

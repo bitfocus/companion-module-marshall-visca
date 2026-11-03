@@ -15,6 +15,7 @@ Stand: November 2026.
 - Aktion „Custom VISCA Command“
 - Raw VISCA über TCP/UDP und Hostnamen
 - Tally (Sony‑kompatibler Befehl)
+- Mehrere Kameras pro Verbindung (bis zu 8), Kamerawahl per Action/Variable, Variablen pro Kamera
 - CI mit Tests, Formatprüfung und Typprüfung, Release‑Workflow
 - JSDoc‑Typen mit Typprüfung für den Modulcode
 
