@@ -27,6 +27,10 @@ const hdmiOutputRangeGroup      = par.hdmiOutputRange.newGroup(lut.hdmiOutputRan
 const whiteBalanceModeGroup     = par.whiteBalanceMode.newGroup(lut.whiteBalanceModeArray, 2)
 const whiteBalanceRedGainGroup  = par.whiteBalanceRedGain.newGroup(2)
 const whiteBalanceBlueGainGroup = par.whiteBalanceBlueGain.newGroup(2)
+const panSpeedGroup            = par.panSpeed.newGroup(2)
+const tiltSpeedGroup           = par.tiltSpeed.newGroup(2)
+const panTiltDirectionGroup    = par.panTiltDirection.newGroup(lut.panTiltDirectionArray, 2)
+const presetNumberGroup        = par.presetNumber.newGroup(2)
 
 // const irisPositionGroup = par.irisPosition.newGroup(lut.irisPositionArray)
 
@@ -123,5 +127,20 @@ commands['whiteBalance/blueGain/reset']  = whiteBalance.newChild('Blue Gain Rese
 commands['whiteBalance/blueGain/up']     = whiteBalance.newChild('Blue Gain Up', new Pattern('04 02'), 'Enabled during White Balance Manual Mode')
 commands['whiteBalance/blueGain/down']   = whiteBalance.newChild('Blue Gain Down', new Pattern('04 03'), 'Enabled during White Balance Manual Mode')
 commands['whiteBalance/blueGain/direct'] = whiteBalance.newChild('Blue Gain Direct', new Pattern('44 00 00 0p 0q', new Match('pq', whiteBalanceBlueGainGroup)), 'Enabled during White Balance Manual Mode')
+
+const panTilt = tasks.newChildFamily('Pan Tilt', new Pattern('06'))
+commands['panTilt/drive'] = panTilt.newChild('Drive', new Pattern('01 pp tt 0y 0z', [
+    new Match('pp', panSpeedGroup),
+    new Match('tt', tiltSpeedGroup),
+    new Match('yz', panTiltDirectionGroup)
+]))
+commands['panTilt/stop']  = panTilt.newChild('Stop', new Pattern('01 01 01 03 03'))
+commands['panTilt/home']  = panTilt.newChild('Home', new Pattern('04'))
+commands['panTilt/reset'] = panTilt.newChild('Reset', new Pattern('05'), 'Recalibrates the pan/tilt mechanics')
+
+const preset = tasks.newChildFamily('Preset', new Pattern('04 3F'))
+commands['preset/recall'] = preset.newChild('Recall', new Pattern('02 pq', new Match('pq', presetNumberGroup)))
+commands['preset/set']    = preset.newChild('Set', new Pattern('01 pq', new Match('pq', presetNumberGroup)))
+commands['preset/reset']  = preset.newChild('Reset', new Pattern('00 pq', new Match('pq', presetNumberGroup)), 'Clears the stored preset')
 
 export default commands

@@ -78,3 +78,14 @@ export const whiteBalanceModeArray = {
     'Manual':       0x05,
     'Sodium Lamp':  0x0C
 }
+export const panTiltDirectionArray = {
+    'Up':         0x31,
+    'Down':       0x32,
+    'Left':       0x13,
+    'Right':      0x23,
+    'Up Left':    0x11,
+    'Up Right':   0x21,
+    'Down Left':  0x12,
+    'Down Right': 0x22,
+    'Stop':       0x33
+}

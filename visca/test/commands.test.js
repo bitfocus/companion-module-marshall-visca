@@ -25,6 +25,12 @@ const payloads = [
     ['focus/direct', { 'Focus Position': 234 }, '81 01 04 48 00 00 0E 0A FF'],
     ['focus/mode', { 'Focus Mode': 'Manual Focus' }, '81 01 04 38 03 FF'],
     ['resolution', { 'Resolution': 'FHD 1080P(1920 x 1080) - 59.94p' }, '81 01 06 35 00 08 FF'],
+    ['panTilt/drive', { 'Pan Speed': 0x18, 'Tilt Speed': 0x14, 'Direction': 'Up Left' }, '81 01 06 01 18 14 01 01 FF'],
+    ['panTilt/drive', { 'Pan Speed': 1, 'Tilt Speed': 1, 'Direction': 'Stop' }, '81 01 06 01 01 01 03 03 FF'],
+    ['panTilt/stop', {}, '81 01 06 01 01 01 03 03 FF'],
+    ['panTilt/home', {}, '81 01 06 04 FF'],
+    ['preset/recall', { 'Preset': 12 }, '81 01 04 3F 02 0C FF'],
+    ['preset/set', { 'Preset': 127 }, '81 01 04 3F 01 7F FF'],
     ['whiteBalance/redGain/direct', { 'White Balance Red Gain': 0x40 }, '81 01 04 43 00 00 04 00 FF'],
 ]
 

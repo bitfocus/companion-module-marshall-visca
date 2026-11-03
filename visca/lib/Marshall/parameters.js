@@ -20,3 +20,7 @@ export const whiteBalanceRedGain = new Range('White Balance Red Gain', 0x00, 0x8
 export const whiteBalanceBlueGain = new Range('White Balance Blue Gain', 0x00, 0x80, `${0x00} to ${0x80}`)
 
 export const irisPosition = new List('Iris Position', Object.keys(lut.irisPositionArray))
+export const panSpeed             = new Range('Pan Speed', 0x01, 0x18, `${0x01} (Low) to ${0x18} (High)`)
+export const tiltSpeed            = new Range('Tilt Speed', 0x01, 0x14, `${0x01} (Low) to ${0x14} (High)`)
+export const panTiltDirection     = new List('Direction', Object.keys(lut.panTiltDirectionArray))
+export const presetNumber         = new Range('Preset', 0, 127, `0 to 127`)
