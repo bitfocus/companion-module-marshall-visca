@@ -81,29 +81,33 @@ class Request {
     }
 
     receiveReply(payload) {
-        console.log('Payload', Buffer.from(payload).toString('hex').toUpperCase().match(/../g).join(' '))
-        
         const expectedType = this._getCurrentStateObject().expectedType
         if (expectedType === undefined) {
-            throw Error(`Did not expect incomming message in message state '${this.stateObject.name}'`)
+            throw Error(`Did not expect incoming message in message state '${this._getCurrentStateObject().name}'`)
         }
 
         const identifiedReply = this.identifyRecievedPayload(payload)
 
-        console.log('Identified Reply', identifiedReply)
-
         if (identifiedReply === undefined) {
-            throw Error('Could not understand message')
+            throw Error(`Could not understand message: ${Buffer.from(payload).toString('hex').toUpperCase()}`)
         }
         
         if (identifiedReply.packet.type === Packet.TYPES.ERROR) {
             this._setState(RequestStates.ERROR, identifiedReply)
         } else {
-            if (identifiedReply.packet.type !== expectedType) {
-                console.error('some error')
-            }
+            // A reply can skip expected states (e.g. completion without ack), _setState resolves the skipped ones
             this._setState(StateTransition[identifiedReply.packet.type], identifiedReply)
         }
+    }
+
+    /**
+     * Sets the request to the error state, unless it is already finished.
+     * 
+     * @param {*} reason  Reason passed to the rejected promises.
+     */
+    fail(reason) {
+        if (this._state === RequestStates.ERROR || this._state === RequestStates.COMPLETED) { return }
+        this._setState(RequestStates.ERROR, reason)
     }
 
     _setState(newState, data) {
