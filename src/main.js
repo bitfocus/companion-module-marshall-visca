@@ -2,14 +2,16 @@ import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
 import MarshallCamera from '../visca/lib/Marshall/MarshallCamera.js'
 import commands, { inquiries } from '../visca/lib/Marshall/commands.js'
 import { getActionDefinitions } from './actions.js'
+import { getModel, Models } from './models.js'
 import { FeedbacksByVariable, getFeedbackDefinitions } from './feedbacks.js'
-import { InquiryVariables, PolledInquiries, VariableDefinitions } from './variables.js'
+import { InquiryVariables, PolledInquiries, SpeedVariableDefinitions, VariableDefinitions } from './variables.js'
 import { UpgradeScripts } from './upgrades.js'
 
 export { UpgradeScripts }
 
 const RECONNECT_INTERVAL = 5000
 const POLL_AFTER_COMMAND_DELAY = 300
+const DEFAULT_SPEED = { pan: 12, tilt: 10, zoom: 4 }
 
 const isTimeout = (reason) => reason instanceof Error && /Timeout|did not answer/.test(reason.message)
 const reasonToMessage = (reason) =>
@@ -19,11 +21,14 @@ export default class MarshallViscaInstance extends InstanceBase {
 	async init(config) {
 		this.config = config
 		this.state = Object.fromEntries(Object.keys(VariableDefinitions).map((id) => [id, '']))
+		this.speed = { ...DEFAULT_SPEED }
+		this.model = getModel(config.model)
 
-		this.setActionDefinitions(getActionDefinitions(this.sendCommand.bind(this)))
+		this.setActionDefinitions(getActionDefinitions(this))
 		this.setFeedbackDefinitions(getFeedbackDefinitions(this.state))
-		this.setVariableDefinitions(VariableDefinitions)
+		this.setVariableDefinitions({ ...VariableDefinitions, ...SpeedVariableDefinitions })
 		this.setVariableValues(this.state)
+		this.setSpeed(this.speed)
 
 		this.connect()
 	}
@@ -34,6 +39,11 @@ export default class MarshallViscaInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
+		const model = getModel(config.model)
+		if (model !== this.model) {
+			this.model = model
+			this.setActionDefinitions(getActionDefinitions(this))
+		}
 		this.connect()
 	}
 
@@ -63,6 +73,15 @@ export default class MarshallViscaInstance extends InstanceBase {
 				max: 65535,
 				default: 52381,
 				asInteger: true,
+			},
+			{
+				type: 'dropdown',
+				id: 'model',
+				label: 'Model',
+				description: 'Hides values the model does not support (e.g. UHD resolutions)',
+				width: 6,
+				choices: Models.map(({ id, label }) => ({ id, label })),
+				default: Models[0].id,
 			},
 			{
 				type: 'number',
@@ -190,6 +209,11 @@ export default class MarshallViscaInstance extends InstanceBase {
 				)
 			}
 		}
+	}
+
+	setSpeed(speed) {
+		this.speed = speed
+		this.setVariableValues({ pan_speed: speed.pan, tilt_speed: speed.tilt, zoom_speed: speed.zoom })
 	}
 
 	updateState(values) {

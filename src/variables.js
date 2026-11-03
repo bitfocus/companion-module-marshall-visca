@@ -17,6 +17,12 @@ export const VariableDefinitions = {
 	rom_version: { name: 'ROM version' },
 }
 
+export const SpeedVariableDefinitions = {
+	pan_speed: { name: 'Pan speed of the module speed actions' },
+	tilt_speed: { name: 'Tilt speed of the module speed actions' },
+	zoom_speed: { name: 'Zoom speed of the module speed actions' },
+}
+
 /**
  * Converts the answer of each inquiry into variable values.
  */
