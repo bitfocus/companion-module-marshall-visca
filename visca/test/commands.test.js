@@ -99,6 +99,8 @@ const answers = [
 	['power', '81 09 04 00 FF', '90 50 02 FF', { 'Power Mode': 'On' }],
 	['zoomPosition', '81 09 04 47 FF', '90 50 07 0A 0C 00 FF', { 'Zoom Position': 0x7ac0 }],
 	['focusMode', '81 09 04 38 FF', '90 50 03 FF', { 'Focus Mode': 'Manual Focus' }],
+	// Reported by a Marshall camera in the field test, not documented
+	['focusMode', '81 09 04 38 FF', '90 50 04 FF', { 'Focus Mode': 'Unknown (0x04)' }],
 	['aeMode', '81 09 04 39 FF', '90 50 0B FF', { 'AE Mode': 'Iris Priority' }],
 	['irisPosition', '81 09 04 4B FF', '90 50 00 00 01 05 FF', { Position: 0x15 }],
 	[

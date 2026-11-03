@@ -423,7 +423,10 @@ const addInquiry = (key, name, core, ...answerPatterns) => {
 	])
 }
 
-addInquiry('power', 'Power', '04 00', Pattern.fromParameterGroup(powerModeGroup))
+// Cameras report values that are not documented (e.g. focus mode 04), they are decoded as 'Unknown (0x..)'
+const answerGroup = (parameter, lookupTable) => parameter.newGroup(lookupTable, 2, { allowUnknown: true })
+
+addInquiry('power', 'Power', '04 00', Pattern.fromParameterGroup(answerGroup(par.powerMode, lut.powerModeArray)))
 addInquiry(
 	'zoomPosition',
 	'Zoom Position',
@@ -436,9 +439,19 @@ addInquiry(
 	'04 48',
 	new Pattern('0p 0q 0r 0s', new Match('pqrs', par.focusPositionAnswer.newGroup(4))),
 )
-addInquiry('focusMode', 'Focus Mode', '04 38', Pattern.fromParameterGroup(focusModeGroup))
-addInquiry('whiteBalanceMode', 'White Balance Mode', '04 35', Pattern.fromParameterGroup(whiteBalanceModeGroup))
-addInquiry('aeMode', 'AE Mode', '04 39', Pattern.fromParameterGroup(aeModeGroup))
+addInquiry(
+	'focusMode',
+	'Focus Mode',
+	'04 38',
+	Pattern.fromParameterGroup(answerGroup(par.focusMode, lut.focusModeArray)),
+)
+addInquiry(
+	'whiteBalanceMode',
+	'White Balance Mode',
+	'04 35',
+	Pattern.fromParameterGroup(answerGroup(par.whiteBalanceMode, lut.whiteBalanceModeArray)),
+)
+addInquiry('aeMode', 'AE Mode', '04 39', Pattern.fromParameterGroup(answerGroup(par.aeMode, lut.aeModeArray)))
 for (const [key, name, core] of [
 	['irisPosition', 'Iris Position', '04 4B'],
 	['shutterPosition', 'Shutter Position', '04 4A'],

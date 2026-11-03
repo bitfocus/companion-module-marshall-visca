@@ -136,8 +136,8 @@ test('sends an inquiry and resolves the answer', async () => {
 	}
 })
 
-test('fails an inquiry with an unknown answer right away', async () => {
-	const { server, port } = await startFakeCamera({ answerPayload: [0x90, 0x50, 0x07, 0xff] })
+test('fails an inquiry with an answer of the wrong format right away', async () => {
+	const { server, port } = await startFakeCamera({ answerPayload: [0x90, 0x50, 0x02, 0x03, 0xff] })
 	const camera = new MarshallCamera('127.0.0.1', { port })
 	camera.on('error', () => {})
 	try {
