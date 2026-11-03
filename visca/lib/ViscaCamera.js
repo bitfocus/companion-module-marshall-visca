@@ -1,5 +1,5 @@
-const EventEmitter = require('events')
-const { ActionRequest } = require('./Request')
+import EventEmitter from 'node:events'
+import { ActionRequest } from './Request.js'
 
 class ViscaCamera extends EventEmitter {
     /**
@@ -83,4 +83,4 @@ class ViscaCamera extends EventEmitter {
     }
 }
 
-module.exports = ViscaCamera
+export default ViscaCamera

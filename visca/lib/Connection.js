@@ -1,5 +1,5 @@
-const EventEmitter = require('events')
-const dgram = require('dgram')
+import EventEmitter from 'node:events'
+import dgram from 'node:dgram'
 
 class AbstractConnection extends EventEmitter {
     send(dataArray) {
@@ -62,6 +62,6 @@ class Udp extends AbstractConnection {
     }
 }
 
-module.exports = {
+export {
     Udp
 }

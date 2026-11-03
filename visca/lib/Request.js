@@ -1,4 +1,4 @@
-const { Packet } = require('./Packets')
+import { Packet } from './Packets.js'
 
 const RequestStates = Object.freeze({
     PENDING: 0,
@@ -154,7 +154,7 @@ class ActionRequest extends Request {
     }
 }
 
-module.exports = {
+export {
     Request,
     ActionRequest
 }

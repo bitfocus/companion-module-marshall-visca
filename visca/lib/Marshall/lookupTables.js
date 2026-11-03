@@ -1,6 +1,6 @@
-exports.nSockets = 2
+export const nSockets = 2
 
-exports.irisPositionArray = {
+export const irisPositionArray = {
     'Close': 0x0F,
     'F1.6':  0x0E,
     'F2':    0x0D,
@@ -19,39 +19,39 @@ exports.irisPositionArray = {
     'F18':   0x00   
 }
 
-exports.powerModeArray = {
+export const powerModeArray = {
     'On':            0x02,
     'Off (Standby)': 0x03
 }
 
-exports.defaultOnOffArray = {
+export const defaultOnOffArray = {
     'On':  0x02,
     'Off': 0x03
 }
 
-exports.focusModeArray = {
+export const focusModeArray = {
     'Auto Focus':   0x02,
     'Manual Focus': 0x03
 }
 
-exports.curveTrackingArray = {
+export const curveTrackingArray = {
     'Curve tracking': 0x02,
     'Zoom tracking':  0x03
 }
 
-exports.autofocusSensitivityArray = {
+export const autofocusSensitivityArray = {
     'High':   0x01,
     'Middle': 0x02,
     'Low':    0x03
 }
 
-exports.autofocusFrameArray = {
+export const autofocusFrameArray = {
     'Auto':       0x01,
     'Full Frame': 0x02,
     'Center':     0x03
 }
 
-exports.resolutionArray = {
+export const resolutionArray = {
     'QFHD 4K(3840 x 2160) - 29.97p':   0x05,
     'QFHD 4K(3840 x 2160) - 25p':      0x06,
     'FHD 1080P(1920 x 1080) - 59.94p': 0x08,
@@ -64,12 +64,12 @@ exports.resolutionArray = {
     'HD 720P(1280 x 720) - 25p':       0x12
 }
 
-exports.hdmiOutputRangeArray = {
+export const hdmiOutputRangeArray = {
     '16~235': 0x01,
     '1~254':  0x02
 }
 
-exports.whiteBalanceModeArray = {
+export const whiteBalanceModeArray = {
     'Auto':         0x00,
     'Indoor':       0x01,
     'Outdoor':      0x02,

@@ -1,6 +1,6 @@
-const EventEmitter = require('events')
-const { Packet } = require('./Packets')
-const utils = require('./utils')
+import EventEmitter from 'node:events'
+import { Packet } from './Packets.js'
+import * as utils from './utils.js'
 
 class OpenViscaSocket extends EventEmitter {
     constructor() {
@@ -182,4 +182,4 @@ class ViscaOverIpSocket extends AbstractViscaSocket {
     }
 }
 
-module.exports = ViscaOverIpSocket
+export default ViscaOverIpSocket

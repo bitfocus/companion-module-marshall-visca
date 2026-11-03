@@ -1,8 +1,8 @@
-const test = require('node:test')
-const assert = require('node:assert')
-const dgram = require('dgram')
-const MarshallCamera = require('../lib/Marshall/MarshallCamera')
-const commands = require('../lib/Marshall/commands')
+import test from 'node:test'
+import assert from 'node:assert'
+import dgram from 'node:dgram'
+import MarshallCamera from '../lib/Marshall/MarshallCamera.js'
+import commands from '../lib/Marshall/commands.js'
 
 /**
  * Minimal VISCA over IP camera: answers the sequence reset and replies to

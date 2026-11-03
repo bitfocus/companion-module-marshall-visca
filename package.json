@@ -2,7 +2,11 @@
   "name": "marshall-ptz-camera",
   "version": "0.0.1",
   "description": "Marshall PTZ Camera plugin for Companion",
-  "keywords": ["Camera", "PTZ", "VISCA"],
+  "keywords": [
+    "Camera",
+    "PTZ",
+    "VISCA"
+  ],
   "product": [
     "CV630-IP"
   ],
@@ -12,5 +16,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Steffen Zeile",
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module"
 }

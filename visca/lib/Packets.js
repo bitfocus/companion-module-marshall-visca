@@ -214,10 +214,10 @@ class Pattern {
     }
 }
 
-module.exports = {
+export {
     Pattern,
     Match,
-    CommandFamily: CommandFamily,
+    CommandFamily,
     Command,
     PacketFamily,
     Packet

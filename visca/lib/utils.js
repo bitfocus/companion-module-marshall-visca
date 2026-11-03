@@ -12,7 +12,7 @@
  * @param {Iterable.<number>}  byteArray  Array of integers between 0 and 255.
  * @return {number}                       Return unsigned integer.
  */
-exports.byteArrayToUint = function (byteArray) {
+export function byteArrayToUint(byteArray) {
     return byteArray.reduce((sum, byte, pos, arr) => sum + byte * 256 ** (arr.length - pos - 1), 0)
 }
 
@@ -27,7 +27,7 @@ exports.byteArrayToUint = function (byteArray) {
  * @param {number}  length   Number of returned bytes. Must be a positiv integer.
  * @return {Uint8Array}      Return array of integers between 0 and 255.
  */
-exports.uintToByteArray = function (integer, length) {
+export function uintToByteArray(integer, length) {
     let int_array = Array.from({ length: length }, (_, ind) => (integer >>> (8 * (length - ind - 1))) % 256)
     return new Uint8Array(int_array)
 }
@@ -41,7 +41,7 @@ exports.uintToByteArray = function (integer, length) {
  * @param {Array.<number>}  hexArray  Array of integers between 0 and 15.
  * @return {number}                   Return unsigned integer.
  */
-exports.hexArrayToUint = function (hexArray) {
+export function hexArrayToUint(hexArray) {
     return hexArray.reduce((int, hex) => int * 16 + hex, 0)
 }
 
@@ -56,7 +56,7 @@ exports.hexArrayToUint = function (hexArray) {
  * @param {number}  [length=2]  Number of returned hexadezimal values. Must be a positiv integer.
  * @return {Array.<number>}     Return array of integers between 0 and 15.
  */
-exports.uintToHexArray = function (integer, length=2) {
+export function uintToHexArray(integer, length=2) {
     return Array.from({length: length}, (_, i) => (integer >>> (4 * (length - i - 1))) % 16)
 }
 
@@ -68,11 +68,11 @@ exports.uintToHexArray = function (integer, length=2) {
  * @param {Iterable.<number>}  byteArray  Array of integers between 0 and 255.
  * @return {Array.<number>}               Return array of integers between 0 and 15.
  */
-exports.byteArrayToHexArray = function (byteArray) {
-    return byteArray.reduce((hexArray, byte) => hexArray.concat(exports.uintToHexArray(byte)), [])
+export function byteArrayToHexArray(byteArray) {
+    return byteArray.reduce((hexArray, byte) => hexArray.concat(uintToHexArray(byte)), [])
 }
 
-exports.hexArrayToByteArray = function (hexArray) {
+export function hexArrayToByteArray(hexArray) {
     if (hexArray.length % 2 !== 0) {
         hexArray = [0, ...hexArray] // Do not modify the array of the caller
     }
@@ -90,14 +90,14 @@ exports.hexArrayToByteArray = function (hexArray) {
  * @param {string}          [spacer=' ']  Spacer string between the pairs of hexadezimal values.
  * @return {string}                       Return string containing the hexadezimal values.
  */
-exports.byteArrayToHexString = function (byteArray, spacer=' ') {
-    let hexArray = exports.byteArrayToHexArray(byteArray)
-    return exports.hexArrayToHexString(hexArray, spacer)
+export function byteArrayToHexString(byteArray, spacer=' ') {
+    let hexArray = byteArrayToHexArray(byteArray)
+    return hexArrayToHexString(hexArray, spacer)
 }
 
-exports.hexStringToByteArray = function (hexString) {
-    let hexArray = exports.hexStringToHexArray(hexString)
-    return exports.hexArrayToByteArray(hexArray)
+export function hexStringToByteArray(hexString) {
+    let hexArray = hexStringToHexArray(hexString)
+    return hexArrayToByteArray(hexArray)
 }
 
 /**
@@ -111,12 +111,12 @@ exports.hexStringToByteArray = function (hexString) {
  * @param {string}         [spacer=' ']  Spacer string between the pairs of hexadezimal values.
  * @return {string}                      Return string containing the hexadezimal values.
  */
-exports.hexArrayToHexString = function (hexArray, spacer=' ') {
+export function hexArrayToHexString(hexArray, spacer=' ') {
     let hexCharArray = hexArray.map(hex => hex.toString(16).toUpperCase())
     return hexCharArray.join('').match(/../g).join(spacer)
 }
 
-exports.hexStringToHexArray = function (hexString) {
+export function hexStringToHexArray(hexString) {
     let hexCharArray = hexString.replace(/\s+/g, '').split('')
     return hexCharArray.map(hexChar => parseInt(hexChar, 16))
 }

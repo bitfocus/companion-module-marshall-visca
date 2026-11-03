@@ -1,5 +1,5 @@
 /* eslint-disable no-empty-pattern */
-const utils = require('./utils')
+import * as utils from './utils.js'
 
 class Parameter {
     constructor(name, comment) {
@@ -257,7 +257,7 @@ class ParameterGroup {
     }
 }
 
-module.exports = {
+export {
     Parameter,
     Range,
     List,

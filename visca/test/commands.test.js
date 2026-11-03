@@ -1,8 +1,8 @@
-const test = require('node:test')
-const assert = require('node:assert')
-const { Match, Pattern } = require('../lib/Packets')
-const { Range, ParameterGroup } = require('../lib/Parameters')
-const commands = require('../lib/Marshall/commands')
+import test from 'node:test'
+import assert from 'node:assert'
+import { Match, Pattern } from '../lib/Packets.js'
+import { Range, ParameterGroup } from '../lib/Parameters.js'
+import commands from '../lib/Marshall/commands.js'
 
 const senderAddress = new ParameterGroup(new Range('Address', 1, 7), {
     nHex: 1,

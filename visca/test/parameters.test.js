@@ -1,8 +1,8 @@
-const test = require('node:test')
-const assert = require('node:assert')
-const { Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup } = require('../lib/Parameters')
-const utils = require('../lib/utils')
-const lut = require('../lib/Marshall/lookupTables')
+import test from 'node:test'
+import assert from 'node:assert'
+import { Range, List, HexLiteral, IPv4, AsciiString, ParameterGroup } from '../lib/Parameters.js'
+import * as utils from '../lib/utils.js'
+import * as lut from '../lib/Marshall/lookupTables.js'
 
 const memoryNumber = new ParameterGroup(new Range('Memory Number', 0, 255), {
     nHex: 3,

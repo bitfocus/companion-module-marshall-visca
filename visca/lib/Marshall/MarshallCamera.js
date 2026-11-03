@@ -1,7 +1,7 @@
-const { Udp } = require('../Connection')
-const ViscaOverIpSocket = require('../ViscaSocket')
-const ViscaCamera = require('../ViscaCamera')
-const { nSockets } = require('./lookupTables')
+import { Udp } from '../Connection.js'
+import ViscaOverIpSocket from '../ViscaSocket.js'
+import ViscaCamera from '../ViscaCamera.js'
+import { nSockets } from './lookupTables.js'
 
 class MarshallCamera extends ViscaCamera {
     constructor(ip, { port=52381, address=1, timeouts }={}) {
@@ -18,4 +18,4 @@ class MarshallCamera extends ViscaCamera {
     }
 }
 
-module.exports = MarshallCamera
+export default MarshallCamera
