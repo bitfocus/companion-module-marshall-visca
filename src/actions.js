@@ -19,8 +19,8 @@ function createOption(parameter) {
 		label: parameter.name,
 		tooltip: parameter.comment,
 	}
-	switch (parameter.constructor) {
-		case Range:
+	switch (true) {
+		case parameter instanceof Range:
 			return {
 				...option,
 				type: 'number',
@@ -30,7 +30,7 @@ function createOption(parameter) {
 				asInteger: true,
 				clampValues: true,
 			}
-		case List:
+		case parameter instanceof List:
 			return {
 				...option,
 				type: 'dropdown',
