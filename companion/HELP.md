@@ -62,7 +62,7 @@ Values the camera does not report stay empty.
 
 ### Presets
 
-- Camera selection (with more than one camera): select camera 1 to 8, next/previous
+- Camera selection: select camera 1 to 8 (showing the name of configured cameras), next/previous camera
 - Pan/tilt arrows, zoom, speed up/down, power, focus
 - Presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position
 - Exposure / Iris: AE modes, iris, shutter, gain, bright, exposure compensation, backlight, WDR
