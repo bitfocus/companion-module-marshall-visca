@@ -150,7 +150,7 @@ class IPv4 extends Parameter {
     }
     
     newGroup() {
-        const nHex = 4
+        const nHex = 8 // 4 octets with 2 hexadecimal digits each
         
         const encoder = parameterDict => {
             const ipv4String = parameterDict[this.name]
@@ -185,7 +185,7 @@ class AsciiString extends Parameter {
     }
     
     newGroup() {
-        const nHex = this.nCharacters
+        const nHex = 2 * this.nCharacters // 1 byte with 2 hexadecimal digits per character
         
         const encoder = parameterDict => {
             const string = parameterDict[this.name]
@@ -225,7 +225,7 @@ class ParameterGroup {
         try {
             var hexArray = this._encoder(parameterDict)
         } catch (error) {
-            throw Error(`Encoding failed: ${parameterDict}`)
+            throw Error(`Encoding failed: ${JSON.stringify(parameterDict)} (${error.message})`)
         }
         this.verifyHexArray(hexArray)
         return hexArray
@@ -237,15 +237,15 @@ class ParameterGroup {
         try {
             var parameterDict = this._decoder(hexArray)
         } catch (error) {
-            throw Error(`Decoding failed: ${hexArray}`)
+            throw Error(`Decoding failed: ${hexArray} (${error.message})`)
         }
         this.verifyParameterDict(parameterDict)
         return parameterDict
     }
 
     verifyHexArray(hexArray) {
-        if (hexArray.length !== this.nHex)
-        if (hexArray.some(hexDigit => hexDigit > 0xF)) { throw Error(`Array contains values greater than ${0xF}`)}
+        if (hexArray.length !== this.nHex) { throw Error(`Array length (${hexArray.length}) does not match the expected length: ${this.nHex}`)}
+        if (hexArray.some(hexDigit => !Number.isInteger(hexDigit) || hexDigit < 0x0 || hexDigit > 0xF)) { throw Error(`Array contains values outside of 0 to ${0xF}`)}
     }
 
     verifyParameterDict(parameterDict) {
