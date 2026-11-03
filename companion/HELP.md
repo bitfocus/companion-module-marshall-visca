@@ -64,7 +64,8 @@ Values the camera does not report stay empty.
 ### Presets
 
 - Camera selection: select camera 1 to 8 (showing the name of configured cameras), next/previous camera
-- Pan/tilt arrows, zoom, speed up/down, power, focus
+- Pan/tilt arrows, zoom, speed up/down, power
+- Focus: near/far while held (manual focus only), auto/manual focus, one push
 - Presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position. The button flashes yellow when the camera confirmed storing, and is green while the preset is active.
 - Exposure / Iris: AE modes, iris, shutter, gain, bright, exposure compensation, backlight, WDR
 - Color / White Balance: WB modes, one push trigger, red/blue gain, color gain, hue
