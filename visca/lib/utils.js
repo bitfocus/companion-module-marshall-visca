@@ -74,7 +74,7 @@ exports.byteArrayToHexArray = function (byteArray) {
 
 exports.hexArrayToByteArray = function (hexArray) {
     if (hexArray.length % 2 !== 0) {
-        hexArray.unshift(0)
+        hexArray = [0, ...hexArray] // Do not modify the array of the caller
     }
     return Array.from({ length: hexArray.length / 2 }, (_, ind) => 16 * hexArray[2 * ind] + hexArray[2 * ind + 1])
 }
