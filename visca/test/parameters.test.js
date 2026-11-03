@@ -76,3 +76,12 @@ test('hexArrayToByteArray does not modify its input', () => {
 	assert.deepStrictEqual(utils.hexArrayToByteArray(hexArray), [0x01, 0x23])
 	assert.deepStrictEqual(hexArray, [0x1, 0x2, 0x3])
 })
+
+test('lists decode unknown values only when allowed', () => {
+	const strict = new List('Mode', ['A']).newGroup({ A: 0x02 }, 2)
+	const tolerant = new List('Mode', ['A']).newGroup({ A: 0x02 }, 2, { allowUnknown: true })
+	assert.throws(() => strict.decoder([0x0, 0x4]), /not found/)
+	assert.deepStrictEqual(tolerant.decoder([0x0, 0x4]), { Mode: 'Unknown (0x04)' })
+	assert.deepStrictEqual(tolerant.decoder([0x0, 0x2]), { Mode: 'A' })
+	assert.throws(() => tolerant.encoder({ Mode: 'Unknown (0x04)' }), /invalid/)
+})

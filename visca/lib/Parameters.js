@@ -90,7 +90,14 @@ class List extends Parameter {
 		return this.itemNameArray.includes(value)
 	}
 
-	newGroup(itemDict, nHex) {
+	/**
+	 * @param {Record<string, number>} itemDict  Value of each item.
+	 * @param {number} [nHex]                    Number of hexadecimal digits.
+	 * @param {object} [options]
+	 * @param {boolean} [options.allowUnknown=false]  Decode values missing in itemDict as 'Unknown (0x..)'
+	 *   instead of failing. Use it for answers, cameras report values that are not documented.
+	 */
+	newGroup(itemDict, nHex, { allowUnknown = false } = {}) {
 		// nHex ??= Math.max(Object.values(itemDict)).toString(16).length // Node 15.0
 		if (nHex === undefined) {
 			nHex = Math.max(...Object.values(itemDict)).toString(16).length
@@ -118,12 +125,16 @@ class List extends Parameter {
 
 		const decoder = (hexArray) => {
 			const itemValue = utils.hexArrayToUint(hexArray)
-			const itemName = decoderMap.get(itemValue)
+			let itemName = decoderMap.get(itemValue)
+			if (itemName === undefined && allowUnknown) {
+				itemName = `Unknown (0x${itemValue.toString(16).toUpperCase().padStart(nHex, '0')})`
+			}
 			const parameterDict = { [this.name]: itemName }
 			return parameterDict
 		}
 
-		return new ParameterGroup(this, { nHex, encoder, decoder })
+		// Unknown values cannot pass the validation of the list, known values are valid by construction
+		return new ParameterGroup(this, { nHex, encoder, decoder, verifyDecoded: !allowUnknown })
 	}
 }
 
@@ -229,7 +240,7 @@ class AsciiString extends Parameter {
 }
 
 class ParameterGroup {
-	constructor(parameterArray, { encoder, decoder, nHex }) {
+	constructor(parameterArray, { encoder, decoder, nHex, verifyDecoded = true }) {
 		if (parameterArray instanceof Parameter) {
 			this.parameterArray = [parameterArray]
 		} else {
@@ -238,6 +249,7 @@ class ParameterGroup {
 		this.nHex = nHex
 		this._encoder = encoder
 		this._decoder = decoder
+		this._verifyDecoded = verifyDecoded
 	}
 
 	encoder(parameterDict) {
@@ -264,7 +276,9 @@ class ParameterGroup {
 		} catch (error) {
 			throw Error(`Decoding failed: ${hexArray} (${error.message})`)
 		}
-		this.verifyParameterDict(parameterDict)
+		if (this._verifyDecoded) {
+			this.verifyParameterDict(parameterDict)
+		}
 		return parameterDict
 	}
 
