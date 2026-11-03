@@ -16,29 +16,37 @@ class AbstractConnection extends EventEmitter {
     }
 
     _logMessage(topic, dataArray) {
-        console.debug(topic, Buffer.from(dataArray).toString('hex').toUpperCase().match(/../g).join(' '))
+        this.emit('debug', `${topic} ${Buffer.from(dataArray).toString('hex').toUpperCase().match(/../g).join(' ')}`)
     }
 }
 
 class Udp extends AbstractConnection {
     constructor(ip, port=52381) {
         super()
+        this.ip = ip
+        this.port = port
+        this.closed = false
+
+        // The socket is not connected, so sending works right away and a send error does not end the connection
         this._socket = dgram.createSocket('udp4')
-
-        this._socket.connect(port, ip, () => this.emit('connect'))
-        
-        this._socket.on('error', err => {
-            this.emit('error', err)
-            this.close()
+        this._socket.on('error', err => this.emit('error', err))
+        this._socket.on('message', (dataBuffer, rinfo) => {
+            if (rinfo.address === this.ip) {
+                this._receive(dataBuffer)
+            }
         })
-
-        this._socket.on('message', this._receive.bind(this))
     }
 
     send(dataArray) {
+        if (this.closed) {
+            this.emit('error', new Error('Cannot send, connection is closed'))
+            return
+        }
         const dataBuffer = Buffer.from(dataArray)
         super.send(dataBuffer)
-        this._socket.send(dataBuffer)
+        this._socket.send(dataBuffer, this.port, this.ip, err => {
+            if (err) { this.emit('error', err) }
+        })
     }
 
     _receive(dataBuffer) {
@@ -47,8 +55,10 @@ class Udp extends AbstractConnection {
     }
 
     close() {
+        if (this.closed) { return }
+        this.closed = true
         this._socket.close()
-        this.emit('close')
+        super.close()
     }
 }
 
