@@ -1,27 +1,48 @@
 ## Marshall VISCA
 
-Controls Marshall CV PTZ cameras (e.g. CV605, CV607, CV612, CV620, CV630, CV730) with VISCA over IP.
+Controls Marshall CV PTZ cameras (CV605, CV607, CV612, CV620, CV630, CV730) with VISCA.
 
 ### Configuration
 
-- **Camera IP**: IP address of the camera.
-- **VISCA Port**: UDP port for VISCA over IP, `52381` by default.
+- **Camera IP or hostname**
+- **VISCA Port**: `52381` for VISCA over IP.
+- **Protocol**:
+  - _VISCA over IP_ (UDP with the VISCA over IP header) is the default of Marshall cameras.
+  - _Raw VISCA over TCP/UDP_ only for cameras or firmwares that require it. Raw VISCA has no sequence numbers, so commands are sent one after another.
+- **Model**: hides values the model does not support, e.g. UHD resolutions on Full HD models. Choose _Other_ if your model is not listed.
+- **Status polling interval**: how often variables and feedbacks are updated (default 2 s). The power inquiry also checks the connection. `0` disables polling and the connection check.
 
 VISCA over IP has to be enabled in the network settings of the camera.
-The connection status turns green once the camera answers the VISCA sequence number reset.
 
 ### Actions
 
-- **Power**: on / standby
-- **Pan Tilt**: drive in 8 directions with pan and tilt speed, stop, home, reset
+- **Pan Tilt**: drive in 8 directions, stop, home, reset, absolute and relative position, limits
+- **Pan Tilt - Move (Module Speed)** and **Zoom - Move (Module Speed)**: use the speed stored in the module, change it with **Speed - Set / Increase / Decrease**
 - **Preset**: recall, set and clear presets 0 to 127
-- **Zoom**: stop, tele/wide (standard, variable speed, step), direct position
-- **Focus**: stop, far/near (standard, variable speed, step), direct position, auto/manual, one push trigger
-- **Autofocus**: sensitivity, frame
-- **Zoom and Focus**: direct position
+- **Zoom**, **Focus**, **Autofocus**, **Zoom and Focus**: movement, direct positions, auto/manual focus, one push
+- **Exposure**: AE mode, iris, shutter, gain, bright, exposure compensation, backlight, WDR
+- **Image**: aperture (sharpness), color gain, gamma, noise reduction, flip, mirror, defog, picture freeze
 - **White Balance**: mode, one push trigger, red/blue gain
-- **Resolution**, **HDMI Output Range**, **Curve Tracking**, **Initialize Lens**
+- **Menu**: OSD menu on/off/toggle, navigate with _Pan Tilt - Drive_
+- **Power**, **Tally**, **Resolution**, **HDMI Output Range**, **Curve Tracking**, **Initialize Lens**
+- **Custom VISCA Command**: sends any command, e.g. `81 01 04 07 02 FF`
 
-For continuous movements use the _Pan Tilt - Drive_ (or _Zoom - Tele/Wide_) action on button press and _Pan Tilt - Stop_ (or _Zoom - Stop_) on button release.
+For continuous movements use a move/drive action on press and the matching stop on release, like the presets do.
 
-Not every model supports every command or value (e.g. 4K resolutions). The camera answers unsupported commands with an error, which is shown in the log.
+Not every model supports every command or value. The camera answers unsupported commands with an error, which is shown in the log.
+
+### Variables
+
+Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, focus/white balance/AE mode, the last recalled preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
+
+Values the camera does not report stay empty.
+
+### Feedbacks
+
+- Power is on
+- Preset was recalled last
+- Focus mode, white balance mode, AE mode
+
+### Presets
+
+Pan/tilt arrows, zoom, speed up/down, recall and set of presets 0 to 15, power, focus.
