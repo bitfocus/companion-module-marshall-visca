@@ -14,6 +14,8 @@ import { filterChoices } from './models.js'
  * @property {import('./main.js').Speed} speed  Speed of the module speed actions
  * @property {(speed: import('./main.js').Speed) => void} setSpeed
  * @property {(level: import('@companion-module/base').LogLevel, message: string) => void} log
+ * @property {Record<string, unknown>} state  Current variable values, from polling
+ * @property {(values: Record<string, any>) => void} updateState
  */
 
 /**
@@ -107,6 +109,20 @@ export function getCommandActionDefinitions(self) {
 	return actions
 }
 
+/**
+ * @param {{ min: number, max: number }} parameter
+ * @param {unknown} value
+ */
+const clamp = (parameter, value) => Math.min(parameter.max, Math.max(parameter.min, Math.round(Number(value))))
+
+/**
+ * Settings without up/down command, adjusted with the direct command. The key is the variable id.
+ */
+const AdjustableSettings = {
+	color_gain: { label: 'Color Gain', command: 'image/colorGain', parameter: par.colorGain },
+	hue: { label: 'Hue', command: 'image/hue', parameter: par.hue },
+}
+
 const speedOptions = [par.panSpeed, par.tiltSpeed, par.zoomAndFocusSpeed].map((parameter) => createOption(parameter))
 const directionOption = createOption(par.panTiltDirection)
 
@@ -117,7 +133,6 @@ const directionOption = createOption(par.panTiltDirection)
  * @returns {ActionDefinitions}
  */
 export function getModuleActionDefinitions(self) {
-	const clamp = (parameter, value) => Math.min(parameter.max, Math.max(parameter.min, Math.round(Number(value))))
 	const changeSpeed =
 		(sign) =>
 		({ options }) => {
@@ -197,6 +212,41 @@ export function getModuleActionDefinitions(self) {
 						Speed: self.speed.zoom,
 					})
 				}
+			},
+		},
+		image_adjust: {
+			name: 'Image - Adjust Color Gain / Hue',
+			description: 'Steps the value up or down, based on the polled current value',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'setting',
+					label: 'Setting',
+					choices: Object.entries(AdjustableSettings).map(([id, { label }]) => ({ id, label })),
+					default: 'color_gain',
+				},
+				{
+					type: 'number',
+					id: 'step',
+					label: 'Step (negative to decrease)',
+					min: -14,
+					max: 14,
+					default: 1,
+					asInteger: true,
+				},
+			],
+			callback: ({ options }) => {
+				const setting = AdjustableSettings[String(options.setting)]
+				if (!setting) return
+				const current = self.state[String(options.setting)]
+				if (typeof current !== 'number') {
+					self.log('warn', `${setting.label} is unknown, it needs status polling and a camera that reports it`)
+					return
+				}
+				const value = clamp(setting.parameter, current + Number(options.step))
+				self.sendCommand(commands[setting.command], { [setting.parameter.name]: value })
+				// Repeated presses build on the new value before the next poll
+				self.updateState({ [String(options.setting)]: value })
 			},
 		},
 		custom_command: {

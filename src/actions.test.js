@@ -12,6 +12,8 @@ function createSelf(model) {
 		sendCommand: (command, parameterDict) => self.sent.push({ command, parameterDict }),
 		setSpeed: (speed) => (self.speed = speed),
 		log: (level, message) => self.logs.push([level, message]),
+		state: {},
+		updateState: (values) => Object.assign(self.state, values),
 	}
 	return self
 }
@@ -84,4 +86,26 @@ test('custom command sends valid commands and logs invalid ones', () => {
 	actions.custom_command.callback({ options: { command: '81 09 04 00 FF' } })
 	assert.strictEqual(self.sent.length, 1)
 	assert.strictEqual(self.logs[0][0], 'warn')
+})
+
+test('image adjust steps color gain and hue from the current value', () => {
+	const self = createSelf()
+	const actions = getActionDefinitions(self)
+	actions.image_adjust.callback({ options: { setting: 'color_gain', step: 1 } })
+	assert.strictEqual(self.sent.length, 0, 'unknown value is not adjusted')
+	assert.strictEqual(self.logs[0][0], 'warn')
+
+	self.state.color_gain = 13
+	actions.image_adjust.callback({ options: { setting: 'color_gain', step: 1 } })
+	actions.image_adjust.callback({ options: { setting: 'color_gain', step: 1 } })
+	assert.deepStrictEqual(
+		self.sent.map(({ parameterDict }) => parameterDict),
+		[{ 'Color Gain': 14 }, { 'Color Gain': 14 }],
+	)
+
+	self.state.hue = 7
+	actions.image_adjust.callback({ options: { setting: 'hue', step: -2 } })
+	assert.strictEqual(self.sent.at(-1).command.name, 'Hue')
+	assert.deepStrictEqual(self.sent.at(-1).parameterDict, { Hue: 5 })
+	assert.strictEqual(self.state.hue, 5)
 })
