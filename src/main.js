@@ -1,3 +1,4 @@
+// @ts-check
 import { lookup } from 'node:dns/promises'
 import net from 'node:net'
 import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
@@ -20,7 +21,32 @@ const isTimeout = (reason) => reason instanceof Error && /Timeout|did not answer
 const reasonToMessage = (reason) =>
 	reason instanceof Error ? reason.message : (reason?.packet?.name ?? String(reason))
 
+/**
+ * @typedef {{ pan: number, tilt: number, zoom: number }} Speed
+ */
+
 export default class MarshallViscaInstance extends InstanceBase {
+	/** @type {Record<string, any>} */
+	config = {}
+	/** @type {Record<string, import('@companion-module/base').JsonValue>} Current variable values */
+	state = {}
+	/** @type {Speed} */
+	speed = { ...DEFAULT_SPEED }
+	/** @type {import('./models.js').Model} */
+	model = getModel(undefined)
+	/** @type {MarshallCamera | undefined} */
+	camera = undefined
+	/** @type {Set<string>} Inquiries that the camera supports */
+	polledInquiries = new Set()
+	/** @type {NodeJS.Timeout | undefined} */
+	reconnectTimer = undefined
+	/** @type {NodeJS.Timeout | undefined} */
+	pollTimer = undefined
+	/** @type {NodeJS.Timeout | undefined} */
+	pollSoonTimer = undefined
+	polling = false
+	connectGeneration = 0
+
 	async init(config) {
 		this.config = config
 		this.state = Object.fromEntries(Object.keys(VariableDefinitions).map((id) => [id, '']))
@@ -52,6 +78,9 @@ export default class MarshallViscaInstance extends InstanceBase {
 		this.connect()
 	}
 
+	/**
+	 * @returns {import('@companion-module/base').SomeCompanionConfigField[]}
+	 */
 	getConfigFields() {
 		return [
 			{
@@ -155,7 +184,7 @@ export default class MarshallViscaInstance extends InstanceBase {
 
 	disconnect() {
 		// Invalidates a pending hostname lookup of connect()
-		this.connectGeneration = (this.connectGeneration ?? 0) + 1
+		this.connectGeneration++
 		clearTimeout(this.reconnectTimer)
 		this.reconnectTimer = undefined
 		this.stopPolling()
@@ -170,6 +199,7 @@ export default class MarshallViscaInstance extends InstanceBase {
 		clearTimeout(this.reconnectTimer)
 		this.reconnectTimer = undefined
 		this.stopPolling()
+		if (!camera) return
 
 		camera.connect().then(
 			() => {
@@ -249,11 +279,19 @@ export default class MarshallViscaInstance extends InstanceBase {
 		}
 	}
 
+	/**
+	 * @param {Speed} speed
+	 */
 	setSpeed(speed) {
 		this.speed = speed
 		this.setVariableValues({ pan_speed: speed.pan, tilt_speed: speed.tilt, zoom_speed: speed.zoom })
 	}
 
+	/**
+	 * Sets variable values and checks the feedbacks that depend on changed values.
+	 *
+	 * @param {Record<string, import('@companion-module/base').JsonValue | undefined>} values
+	 */
 	updateState(values) {
 		const changed = {}
 		for (const [id, value] of Object.entries(values)) {
@@ -267,7 +305,8 @@ export default class MarshallViscaInstance extends InstanceBase {
 
 		this.setVariableValues(changed)
 		const feedbacks = new Set(ids.flatMap((id) => FeedbacksByVariable[id] ?? []))
-		if (feedbacks.size) this.checkFeedbacks(...feedbacks)
+		const [first, ...rest] = feedbacks
+		if (first) this.checkFeedbacks(first, ...rest)
 	}
 
 	sendCommand(command, parameterDict) {

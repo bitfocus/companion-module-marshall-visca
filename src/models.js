@@ -1,3 +1,8 @@
+// @ts-check
+/**
+ * @typedef {{ id: string, label: string, uhd: boolean }} Model
+ */
+
 /**
  * Supported models. The VISCA command set is shared, the models differ in the supported values.
  */
@@ -11,6 +16,10 @@ export const Models = [
 	{ id: 'cv730', label: 'CV730 (30x, UHD60)', uhd: true },
 ]
 
+/**
+ * @param {unknown} id
+ * @returns {Model}
+ */
 export function getModel(id) {
 	return Models.find((model) => model.id === id) ?? Models[0]
 }

@@ -1,12 +1,25 @@
+// @ts-check
 import { combineRgb } from '@companion-module/base'
 
 const white = combineRgb(255, 255, 255)
 const black = combineRgb(0, 0, 0)
 const green = combineRgb(0, 153, 0)
 
+/**
+ * @param {string} text
+ * @param {import('@companion-module/base').CompanionTextSize} [size]
+ * @returns {import('@companion-module/base').CompanionButtonStyleProps}
+ */
 const style = (text, size = '14') => ({ text, size, color: white, bgcolor: black })
+/**
+ * @param {string} actionId
+ * @param {import('@companion-module/base').CompanionOptionValues} [options]
+ */
 const action = (actionId, options = {}) => ({ actionId, options })
 
+/**
+ * @returns {import('@companion-module/base').CompanionSimplePresetDefinition}
+ */
 const pressRelease = (name, text, down, up) => ({
 	type: 'simple',
 	name,
@@ -15,6 +28,13 @@ const pressRelease = (name, text, down, up) => ({
 	feedbacks: [],
 })
 
+/**
+ * @param {string} name
+ * @param {string} text
+ * @param {any[]} actions
+ * @param {any[]} [feedbacks]
+ * @returns {import('@companion-module/base').CompanionSimplePresetDefinition}
+ */
 const press = (name, text, actions, feedbacks = []) => ({
 	type: 'simple',
 	name,
@@ -38,9 +58,15 @@ const PRESET_NUMBERS = Array.from({ length: 16 }, (_, idx) => idx)
 
 /**
  * @param {string} label  Label of the connection, used to show variables on the buttons.
+ * @returns {{
+ *   structure: import('@companion-module/base').CompanionPresetSection[],
+ *   presets: import('@companion-module/base').CompanionPresetDefinitions,
+ * }}
  */
 export function getPresetDefinitions(label) {
+	/** @type {import('@companion-module/base').CompanionPresetDefinitions} */
 	const presets = {}
+	/** @type {import('@companion-module/base').CompanionPresetSection[]} */
 	const structure = []
 	const addSection = (id, name, description, definitions) => {
 		for (const [presetId, preset] of Object.entries(definitions)) {

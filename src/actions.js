@@ -1,11 +1,28 @@
+// @ts-check
 import { Range, List } from '../visca/lib/Parameters.js'
 import commands, { createCustomCommand } from '../visca/lib/Marshall/commands.js'
 import * as par from '../visca/lib/Marshall/parameters.js'
 import { filterChoices } from './models.js'
 
 /**
+ * @typedef {import('@companion-module/base').CompanionActionDefinitions} ActionDefinitions
+ * @typedef {import('@companion-module/base').SomeCompanionActionInputField} ActionInputField
+ *
+ * @typedef {object} ActionContext  The module instance, or a stub in tests
+ * @property {(command: any, parameterDict: Record<string, any>) => void} sendCommand
+ * @property {import('./models.js').Model} [model]  Limits the offered values
+ * @property {import('./main.js').Speed} speed  Speed of the module speed actions
+ * @property {(speed: import('./main.js').Speed) => void} setSpeed
+ * @property {(level: import('@companion-module/base').LogLevel, message: string) => void} log
+ */
+
+/**
  * Converts a command key like 'zoom/tele/variable' or a parameter name like 'Pan Speed'
  * into an id that is safe to use in Companion (and in expressions).
+ */
+/**
+ * @param {string} name
+ * @returns {string}
  */
 export function toId(name) {
 	return name
@@ -15,6 +32,11 @@ export function toId(name) {
 		.replace(/^_|_$/g, '')
 }
 
+/**
+ * @param {any} parameter  Parameter of the VISCA library
+ * @param {import('./models.js').Model} [model]
+ * @returns {ActionInputField}
+ */
 function createOption(parameter, model) {
 	const option = {
 		id: toId(parameter.name),
@@ -64,9 +86,8 @@ export function toParameterDict(parameters, options) {
 /**
  * Creates the action definitions for all commands.
  *
- * @param {object} self
- * @param {(command: object, parameterDict: object) => void} self.sendCommand
- * @param {object} [self.model]  Model from models.js, limits the offered values.
+ * @param {Pick<ActionContext, 'sendCommand' | 'model'>} self
+ * @returns {ActionDefinitions}
  */
 export function getCommandActionDefinitions(self) {
 	const actions = {}
@@ -92,10 +113,8 @@ const directionOption = createOption(par.panTiltDirection)
 /**
  * Actions that use the speed stored in the module, so that buttons (e.g. speed up/down) can change it.
  *
- * @param {object} self
- * @param {object} self.speed  Current speed { pan, tilt, zoom }
- * @param {(speed: object) => void} self.setSpeed
- * @param {(command: object, parameterDict: object) => void} self.sendCommand
+ * @param {ActionContext} self
+ * @returns {ActionDefinitions}
  */
 export function getModuleActionDefinitions(self) {
 	const clamp = (parameter, value) => Math.min(parameter.max, Math.max(parameter.min, Math.round(Number(value))))
@@ -113,6 +132,7 @@ export function getModuleActionDefinitions(self) {
 			}
 			self.setSpeed(speed)
 		}
+	/** @type {ActionInputField[]} */
 	const changeSpeedOptions = [
 		{
 			type: 'dropdown',
@@ -197,6 +217,10 @@ export function getModuleActionDefinitions(self) {
 	}
 }
 
+/**
+ * @param {ActionContext} self
+ * @returns {ActionDefinitions}
+ */
 export function getActionDefinitions(self) {
 	return { ...getCommandActionDefinitions(self), ...getModuleActionDefinitions(self) }
 }

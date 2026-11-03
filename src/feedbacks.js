@@ -1,3 +1,4 @@
+// @ts-check
 import { combineRgb } from '@companion-module/base'
 import * as lut from '../visca/lib/Marshall/lookupTables.js'
 
@@ -5,6 +6,13 @@ const activeStyle = { bgcolor: combineRgb(0, 153, 0), color: combineRgb(255, 255
 
 const choices = (lookupTable) => Object.keys(lookupTable).map((name) => ({ id: name, label: name }))
 
+/**
+ * @param {Record<string, unknown>} state
+ * @param {string} name
+ * @param {string} variableId
+ * @param {Record<string, number>} lookupTable
+ * @returns {import('@companion-module/base').CompanionBooleanFeedbackDefinition}
+ */
 function modeFeedback(state, name, variableId, lookupTable) {
 	const modes = choices(lookupTable)
 	return {
@@ -17,7 +25,8 @@ function modeFeedback(state, name, variableId, lookupTable) {
 }
 
 /**
- * @param {object} state  Current variable values of the instance.
+ * @param {Record<string, unknown>} state  Current variable values of the instance.
+ * @returns {import('@companion-module/base').CompanionFeedbackDefinitions}
  */
 export function getFeedbackDefinitions(state) {
 	return {
@@ -44,6 +53,8 @@ export function getFeedbackDefinitions(state) {
 
 /**
  * Feedbacks to check when a variable changes.
+ *
+ * @type {Record<string, string[]>}
  */
 export const FeedbacksByVariable = {
 	power: ['power_on'],

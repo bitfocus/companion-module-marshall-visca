@@ -1,0 +1,14 @@
+{
+	"extends": "@companion-module/tools/tsconfig/node22/recommended-esm.json",
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": false,
+		"noEmit": true,
+		"types": ["node"],
+		"strict": false,
+		"noImplicitAny": false,
+		"strictNullChecks": true
+	},
+	"include": ["src/**/*.js"],
+	"exclude": ["src/**/*.test.js"]
+}

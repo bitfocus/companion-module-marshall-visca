@@ -24,5 +24,7 @@ jobs:
         run: yarn install --immutable
       - name: Check formatting
         run: yarn prettier --check .
+      - name: Type check
+        run: yarn typecheck
       - name: Run tests
         run: yarn test

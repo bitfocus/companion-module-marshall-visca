@@ -1,3 +1,4 @@
+// @ts-check
 export const UpgradeScripts = [
 	/*
 	 * Place your upgrade scripts here

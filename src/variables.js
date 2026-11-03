@@ -1,3 +1,4 @@
+// @ts-check
 export const VariableDefinitions = {
 	power: { name: 'Power state' },
 	zoom_position: { name: 'Zoom position' },
