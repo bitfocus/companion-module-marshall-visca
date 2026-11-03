@@ -20,7 +20,7 @@ const zoomMemoryModeGroup       = par.zoomMemoryMode.newGroup(lut.defaultOnOffAr
 const focusPositionGroup        = par.focusPosition.newGroup(4)
 const focusModeGroup            = par.focusMode.newGroup(lut.focusModeArray, 2)
 const curveTrackingGroup        = par.curveTracking.newGroup(lut.curveTrackingArray, 2)
-const autofocusSensitivtyGroup  = par.autofocusSensitivty.newGroup(lut.autofocusSensitivtyArray, 2)
+const autofocusSensitivityGroup  = par.autofocusSensitivity.newGroup(lut.autofocusSensitivityArray, 2)
 const autofocusFrameGroup       = par.autofocusFrame.newGroup(lut.autofocusFrameArray, 2)
 const resolutionGroup           = par.resolution.newGroup(lut.resolutionArray)
 const hdmiOutputRangeGroup      = par.hdmiOutputRange.newGroup(lut.hdmiOutputRangeArray, 2)
@@ -80,7 +80,7 @@ exports['zoom/memoryMode']           = zoom.newChild('Memory Mode', Pattern.conc
 const focus = tasks.newChildFamily('Focus', new Pattern('04'))
 exports['focus/stop']           = focus.newChild('Stop', new Pattern('08 00'), 'Enabled during Manual Focus Mode')
 exports['focus/far/standard']   = focus.newChild('Far (Standard)', new Pattern('08 02'), 'Enabled during Manual Focus Mode')
-exports['focus/near/standards'] = focus.newChild('Near (Standard)', new Pattern('08 03'), 'Enabled during Manual Focus Mode')
+exports['focus/near/standard']  = focus.newChild('Near (Standard)', new Pattern('08 03'), 'Enabled during Manual Focus Mode')
 exports['focus/far/step']       = focus.newChild('Far Step', new Pattern('08 04'), 'Enabled during Manual Focus Mode')
 exports['focus/near/step']      = focus.newChild('Near Step', new Pattern('08 05'), 'Enabled during Manual Focus Mode')
 exports['focus/far/variable']   = focus.newChild('Far (Variable)', new Pattern('08 2p', new Match('p', zoomAndFocusSpeedGroup)), 'Enabled during Manual Focus Mode')
@@ -93,7 +93,7 @@ exports['focus/onePushTrigger'] = focus.newChild('One Push Trigger', new Pattern
 exports['curveTracking'] = tasks.newChild('Curve Tracking', Pattern.concat(new Pattern('04 38 03'), Pattern.fromParameterGroup(curveTrackingGroup)))
 
 const autofocus = tasks.newChildFamily('Autofocus', new Pattern('04'))
-exports['autofocus/sensitivity'] = autofocus.newChild('Autofocus Sensitivity', Pattern.concat(new Pattern('58'), Pattern.fromParameterGroup(autofocusSensitivtyGroup)))
+exports['autofocus/sensitivity'] = autofocus.newChild('Autofocus Sensitivity', Pattern.concat(new Pattern('58'), Pattern.fromParameterGroup(autofocusSensitivityGroup)))
 exports['autofocus/frame']       = autofocus.newChild('Autofocus Frame', Pattern.concat(new Pattern('5C'), Pattern.fromParameterGroup(autofocusFrameGroup)))
 exports['autofocus/frameToggle'] = autofocus.newChild('Autofocus Frame Toggle', new Pattern('5C 10'))
 

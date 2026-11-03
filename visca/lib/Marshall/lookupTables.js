@@ -25,8 +25,8 @@ exports.powerModeArray = {
 }
 
 exports.defaultOnOffArray = {
-    'On':            0x02,
-    'Off (Standby)': 0x03
+    'On':  0x02,
+    'Off': 0x03
 }
 
 exports.focusModeArray = {
@@ -39,7 +39,7 @@ exports.curveTrackingArray = {
     'Zoom tracking':  0x03
 }
 
-exports.autofocusSensitivtyArray = {
+exports.autofocusSensitivityArray = {
     'High':   0x01,
     'Middle': 0x02,
     'Low':    0x03
