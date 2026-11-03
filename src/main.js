@@ -1,5 +1,7 @@
+import { lookup } from 'node:dns/promises'
+import net from 'node:net'
 import { InstanceBase, InstanceStatus, Regex } from '@companion-module/base'
-import MarshallCamera from '../visca/lib/Marshall/MarshallCamera.js'
+import MarshallCamera, { Protocols } from '../visca/lib/Marshall/MarshallCamera.js'
 import commands, { inquiries } from '../visca/lib/Marshall/commands.js'
 import { getActionDefinitions } from './actions.js'
 import { getModel, Models } from './models.js'
@@ -54,15 +56,14 @@ export default class MarshallViscaInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value:
-					'Controls Marshall CV cameras with VISCA over IP (UDP). Enable VISCA over IP in the network settings of the camera.',
+				value: 'Controls Marshall CV cameras with VISCA. Enable VISCA over IP in the network settings of the camera.',
 			},
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Camera IP',
+				label: 'Camera IP or hostname',
 				width: 8,
-				regex: Regex.IP,
+				regex: Regex.HOSTNAME,
 			},
 			{
 				type: 'number',
@@ -73,6 +74,20 @@ export default class MarshallViscaInstance extends InstanceBase {
 				max: 65535,
 				default: 52381,
 				asInteger: true,
+			},
+			{
+				type: 'dropdown',
+				id: 'protocol',
+				label: 'Protocol',
+				description:
+					'VISCA over IP is the default of Marshall cameras. Raw VISCA sends one command at a time, use it only if the camera requires it.',
+				width: 6,
+				choices: [
+					{ id: Protocols.VISCA_OVER_IP, label: 'VISCA over IP (UDP, default port 52381)' },
+					{ id: Protocols.RAW_TCP, label: 'Raw VISCA over TCP' },
+					{ id: Protocols.RAW_UDP, label: 'Raw VISCA over UDP' },
+				],
+				default: Protocols.VISCA_OVER_IP,
 			},
 			{
 				type: 'dropdown',
@@ -97,18 +112,36 @@ export default class MarshallViscaInstance extends InstanceBase {
 		]
 	}
 
-	connect() {
+	async connect() {
 		this.disconnect()
+		const generation = this.connectGeneration
 
-		const host = this.config.host
-		if (!host || !new RegExp(Regex.IP.slice(1, -1)).test(host)) {
-			this.updateStatus(InstanceStatus.BadConfig, 'Camera IP missing or invalid')
+		const host = String(this.config.host ?? '').trim()
+		if (!host || !new RegExp(Regex.HOSTNAME.slice(1, -1)).test(host)) {
+			this.updateStatus(InstanceStatus.BadConfig, 'Camera IP or hostname missing or invalid')
 			return
 		}
 
 		this.updateStatus(InstanceStatus.Connecting)
 
-		const camera = new MarshallCamera(host, { port: Number(this.config.port) || 52381 })
+		// Replies are matched by IP address, so hostnames are resolved first
+		let ip = host
+		if (!net.isIPv4(host)) {
+			try {
+				ip = (await lookup(host, { family: 4 })).address
+			} catch (error) {
+				if (generation !== this.connectGeneration) return
+				this.updateStatus(InstanceStatus.ConnectionFailure, `Cannot resolve ${host}: ${error.message}`)
+				this.reconnectTimer = setTimeout(() => this.connect(), RECONNECT_INTERVAL)
+				return
+			}
+			if (generation !== this.connectGeneration) return
+		}
+
+		const camera = new MarshallCamera(ip, {
+			port: Number(this.config.port) || 52381,
+			protocol: Object.values(Protocols).includes(this.config.protocol) ? this.config.protocol : undefined,
+		})
 		camera.on('error', (error) => this.log('debug', `VISCA: ${error.message}`))
 		camera.connection.on('debug', (message) => this.log('debug', message))
 		this.camera = camera
@@ -118,6 +151,8 @@ export default class MarshallViscaInstance extends InstanceBase {
 	}
 
 	disconnect() {
+		// Invalidates a pending hostname lookup of connect()
+		this.connectGeneration = (this.connectGeneration ?? 0) + 1
 		clearTimeout(this.reconnectTimer)
 		this.reconnectTimer = undefined
 		this.stopPolling()

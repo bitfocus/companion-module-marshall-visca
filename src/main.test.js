@@ -123,3 +123,23 @@ test('reports a connection failure when the camera does not answer', async () =>
 		server.close()
 	}
 })
+
+test('resolves hostnames', async () => {
+	const { server, port } = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({ host: 'localhost', port, poll_interval: 0 })
+		await sleep(100)
+		assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.Ok)
+	} finally {
+		await instance.destroy()
+		server.close()
+	}
+})
+
+test('reports bad config for invalid hosts', async () => {
+	const { instance, host } = createInstance()
+	await instance.init({ host: 'not a host!', port: 52381 })
+	assert.strictEqual(host.statuses.at(-1)[0], InstanceStatus.BadConfig)
+	await instance.destroy()
+})
