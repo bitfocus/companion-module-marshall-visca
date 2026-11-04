@@ -30,9 +30,9 @@ So one page with pan/tilt, zoom, presets and color buttons controls whichever ca
 - **Pan Tilt - Move (Module Speed)** and **Zoom - Move (Module Speed)**: use the speed stored in the module, change it with **Speed - Set / Increase / Decrease**
 - **Preset**: recall, set and clear presets 0 to 127
 - **Zoom**, **Focus**, **Autofocus**, **Zoom and Focus**: movement, direct positions, auto/manual focus, one push
-- **Exposure**: AE mode, iris, shutter, gain, bright, exposure compensation, backlight, WDR
-- **Image**: aperture (sharpness), color gain (saturation), hue, gamma, noise reduction, flip, mirror, defog, picture freeze
-- **Image - Adjust Color Gain / Hue**: steps color gain or hue up/down, based on the polled value (VISCA has no up/down command for them)
+- **Exposure**: AE mode, iris, shutter, gain, bright, exposure compensation, backlight, WDR (not on the CV612)
+- **Image**: aperture (sharpness), saturation (color gain: 0 = 60 %, 4 = 100 %, 14 = 200 %), hue (0 = -15, 15 = neutral, 30 = +15), gamma, noise reduction, flip, mirror, defog, picture freeze
+- **Image - Adjust Saturation / Hue**: steps saturation or hue up/down, based on the polled value (VISCA has no up/down command for them)
 - **White Balance**: mode, one push trigger, red/blue gain
 - **Menu**: OSD menu on/off/toggle, navigate with _Pan Tilt - Drive_
 - **Power**, **Tally**, **Resolution**, **HDMI Output Range**, **Curve Tracking**, **Initialize Lens**
@@ -48,7 +48,7 @@ The connection status is OK when all cameras are reachable. A warning lists the 
 
 `selected_camera` and `selected_camera_name` show the selection. The following values are available for the selected camera without prefix (e.g. `iris`) and for each camera with the prefix `cam<number>_` (e.g. `cam2_iris`, also `cam2_name`):
 
-Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, iris as F-number, focus/white balance/AE mode, red/blue gain, color gain, hue, aperture, exposure compensation, backlight, WDR, the last recalled or stored preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
+Power, zoom/focus/iris/shutter/gain/bright/pan/tilt position, iris as F-number (with the table of the configured model), focus/white balance/AE mode, red/blue gain, saturation in %, hue (-15 to +15), aperture, exposure compensation, backlight, WDR, the last recalled or stored preset (empty after a manual pan/tilt move), vendor and model ID, ROM version and the module speed (`pan_speed`, `tilt_speed`, `zoom_speed`).
 
 Values the camera does not report stay empty.
 
@@ -67,8 +67,8 @@ Values the camera does not report stay empty.
 - Pan/tilt arrows, zoom, speed up/down, power
 - Focus: near/far while held (manual focus only), auto/manual focus, one push
 - Presets 0 to 15: a short press recalls the preset, holding the button for 2 s stores the current position. The button flashes yellow when the camera confirmed storing, and is green while the preset is active.
-- Exposure / Iris: AE modes, iris, shutter, gain, bright, exposure compensation, backlight, WDR
-- Color / White Balance: WB modes, one push trigger, red/blue gain, color gain, hue
+- Exposure / Iris: AE modes, iris, shutter, gain, bright, exposure compensation, backlight
+- Color / White Balance: WB modes, one push trigger, red/blue gain, saturation, hue
 - Image: sharpness, picture freeze
 
-Up/down buttons show the current value. Iris, shutter and gain only change in the matching AE mode, red/blue gain only in white balance mode Manual.
+Up/down buttons show the current value. Each exposure value only works in its AE mode (see the button notes): iris in Manual/Iris Priority, shutter in Manual/Shutter Priority, gain in Manual, bright in Bright, exposure compensation and backlight in Full Auto. Iris, shutter and gain only change in the matching AE mode, red/blue gain only in white balance mode Manual.

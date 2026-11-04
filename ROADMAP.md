@@ -30,7 +30,11 @@ Stand: November 2026.
    - Wertebereiche: Presets 0–127, Shutter/Gain/Bright/Gamma
    - Pan/Tilt‑Positionsbereich für absolute/relative Positionen und Limits
    - Codes für Bild, Exposure, Menü und Tally, Abfragen für Farbe/Exposure (Rot/Blau‑Gain, Color Gain, Hue, Aperture, Backlight, WDR)
-   - Iris‑Tabelle (`irisPositionArray`): stimmt der angezeigte Blendenwert mit dem Kameramenü überein?
+   - ✅ CV612: Iris (Close, F11 … F1.8 = Position 0–12), Saturation (60–200 %), Hue (−15…+15) laut Handbuch und Feldtest
+   - CV612 Shutter: Position 20 bei 1/100 passt zu keiner bekannten Tabelle → Messpunkte sammeln, Tabelle je Bildrate
+   - CV612 Gain (Menü 0–36): Abfrage liefert keinen Wert → Log prüfen, Tabelle ermitteln
+   - CV612 DRC (1–8) statt WDR: VISCA‑Befehl unbekannt
+   - Hue −15…+15 gilt bisher für alle Modelle, für CV620/CV630 nicht dokumentiert
    - Der Befehl `Zoom - Memory Mode` (`81 01 04 47 00 0p FF`) überschneidet sich mit `Zoom - Direct` und ist vermutlich falsch.
 2. **Preset‑Recall‑Geschwindigkeit.** Es gibt keinen dokumentierten Marshall‑Befehl. Sony nutzt `81 01 7E 01 0B pp FF`; das lässt sich bis zur Klärung über „Custom VISCA Command“ testen.
 3. **Fehlende Auflösungscodes**: 1080i sowie UHD60 beim CV730. Die Codes sind unbekannt.
