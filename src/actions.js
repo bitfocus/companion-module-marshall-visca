@@ -3,7 +3,8 @@ import { Range, List } from '../visca/lib/Parameters.js'
 import commands, { createCustomCommand } from '../visca/lib/Marshall/commands.js'
 import * as par from '../visca/lib/Marshall/parameters.js'
 import { cameraOption } from './camera-option.js'
-import { filterChoices } from './models.js'
+import { choiceLabel, filterChoices } from './models.js'
+import { HUE_OFFSET, hueVariables, saturationVariables } from './variables.js'
 
 /**
  * @typedef {import('@companion-module/base').CompanionActionDefinitions} ActionDefinitions
@@ -65,7 +66,10 @@ function createOption(parameter, model) {
 			return {
 				...option,
 				type: 'dropdown',
-				choices: itemNames.map((itemName) => ({ id: itemName, label: itemName })),
+				choices: itemNames.map((itemName) => ({
+					id: itemName,
+					label: model ? choiceLabel(model, parameter, itemName) : itemName,
+				})),
 				default: itemNames[0],
 			}
 		}
@@ -124,8 +128,22 @@ const clamp = (parameter, value) => Math.min(parameter.max, Math.max(parameter.m
  * Settings without up/down command, adjusted with the direct command. The key is the variable id.
  */
 const AdjustableSettings = {
-	color_gain: { label: 'Color Gain', command: 'image/colorGain', parameter: par.colorGain },
-	hue: { label: 'Hue', command: 'image/hue', parameter: par.hue },
+	color_gain: {
+		label: 'Saturation',
+		command: 'image/colorGain',
+		parameter: par.colorGain,
+		/** @param {Record<string, unknown>} state */
+		current: (state) => state.color_gain,
+		variables: saturationVariables,
+	},
+	hue: {
+		label: 'Hue',
+		command: 'image/hue',
+		parameter: par.hue,
+		/** @param {Record<string, unknown>} state */
+		current: (state) => (typeof state.hue === 'number' ? state.hue + HUE_OFFSET : undefined),
+		variables: hueVariables,
+	},
 }
 
 const speedOptions = [par.panSpeed, par.tiltSpeed, par.zoomAndFocusSpeed].map((parameter) => createOption(parameter))
@@ -228,7 +246,7 @@ export function getModuleActionDefinitions(self) {
 			},
 		},
 		image_adjust: {
-			name: 'Image - Adjust Color Gain / Hue',
+			name: 'Image - Adjust Saturation / Hue',
 			description: 'Steps the value up or down, based on the polled current value',
 			options: [
 				{
@@ -253,7 +271,7 @@ export function getModuleActionDefinitions(self) {
 				const setting = AdjustableSettings[String(options.setting)]
 				if (!setting) return
 				const camera = Number(options.camera)
-				const current = self.getCameraState(camera)[String(options.setting)]
+				const current = setting.current(self.getCameraState(camera))
 				if (typeof current !== 'number') {
 					self.log('warn', `${setting.label} is unknown, it needs status polling and a camera that reports it`)
 					return
@@ -261,7 +279,7 @@ export function getModuleActionDefinitions(self) {
 				const value = clamp(setting.parameter, current + Number(options.step))
 				self.sendCommand(commands[setting.command], { [setting.parameter.name]: value }, camera)
 				// Repeated presses build on the new value before the next poll
-				self.updateCameraState(camera, { [String(options.setting)]: value })
+				self.updateCameraState(camera, setting.variables(value))
 			},
 		},
 		custom_command: {

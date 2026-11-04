@@ -294,3 +294,18 @@ test('flashes a stored preset for a moment', async () => {
 		server.close()
 	}
 })
+
+test('shows the iris of the CV612 with its own F-numbers', async () => {
+	const { server, port } = await startFakeCamera()
+	const { instance, host } = createInstance()
+	try {
+		await instance.init({ host: '127.0.0.1', port, poll_interval: 0.1, model: 'cv612' })
+		await sleep(300)
+		// Position 9 is F3.8 in the CV620 table and F2.8 on the CV612
+		assert.strictEqual(host.variables.iris_position, 9)
+		assert.strictEqual(host.variables.iris, 'F2.8')
+	} finally {
+		await instance.destroy()
+		server.close()
+	}
+})

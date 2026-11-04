@@ -107,11 +107,14 @@ test('image adjust steps color gain and hue from the current value', () => {
 		[{ 'Color Gain': 14 }, { 'Color Gain': 14 }],
 	)
 
-	self.state.hue = 7
+	assert.strictEqual(self.state.saturation, '200%')
+
+	// Hue is shown as -15 to +15, sent as position 0 to 30
+	self.state.hue = 0
 	actions.image_adjust.callback({ options: { setting: 'hue', step: -2 } })
 	assert.strictEqual(self.sent.at(-1).command.name, 'Hue')
-	assert.deepStrictEqual(self.sent.at(-1).parameterDict, { Hue: 5 })
-	assert.strictEqual(self.state.hue, 5)
+	assert.deepStrictEqual(self.sent.at(-1).parameterDict, { Hue: 13 })
+	assert.strictEqual(self.state.hue, -2)
 })
 
 test('actions pass the camera option and select cameras', () => {
@@ -128,4 +131,17 @@ test('actions pass the camera option and select cameras', () => {
 	actions.camera_select.callback({ options: { camera: '3' } })
 	actions.camera_select_next.callback({ options: {} })
 	assert.deepStrictEqual(self.cameras, [3, 'next'])
+})
+
+test('iris labels follow the model', () => {
+	const cv612 = getActionDefinitions(createSelf(getModel('cv612')))
+	const choices = cv612.exposure_iris_direct.options.find((o) => o.id === 'iris_position').choices
+	assert.strictEqual(choices.length, 13)
+	// Position 0x0C: F2.2 in the CV620 table, F1.8 on the CV612
+	assert.deepStrictEqual(
+		choices.find((choice) => choice.id === 'F2.2'),
+		{ id: 'F2.2', label: 'F1.8' },
+	)
+	const generic = getActionDefinitions(createSelf())
+	assert.strictEqual(generic.exposure_iris_direct.options.find((o) => o.id === 'iris_position').choices.length, 16)
 })

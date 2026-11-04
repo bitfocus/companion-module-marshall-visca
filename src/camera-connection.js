@@ -218,7 +218,7 @@ export class CameraConnection {
 		try {
 			const answer = await camera.sendInquiry(inquiries[key]).answer
 			if (camera !== this.camera) return
-			this.updateState(InquiryVariables[key](answer))
+			this.updateState(InquiryVariables[key](answer, this.model))
 			if (key === 'power') this.setStatus(InstanceStatus.Ok)
 		} catch (reason) {
 			if (camera !== this.camera) return
