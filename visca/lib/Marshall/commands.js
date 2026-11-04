@@ -325,15 +325,16 @@ addAdjustable(
 	'Exposure Compensation on',
 )
 addOnOff(exposure, 'exposure/backlight', 'Backlight Compensation', '33')
+// Not supported by the CV612, which has DRC instead
 addOnOff(exposure, 'exposure/wdr', 'Wide Dynamic Range', '3D')
 
 const image = tasks.newChildFamily('Image', new Pattern('04'))
 addAdjustable(image, 'image/aperture', 'Aperture', '02', '42', par.aperture.newGroup(2))
 commands['image/colorGain'] = image.newChild(
-	'Color Gain',
+	'Saturation (Color Gain)',
 	new Pattern('49 00 00 00 0p', new Match('p', par.colorGain.newGroup(1))),
 )
-commands['image/hue'] = image.newChild('Hue', new Pattern('4F 00 00 00 0p', new Match('p', par.hue.newGroup(1))))
+commands['image/hue'] = image.newChild('Hue', new Pattern('4F 00 00 0p 0q', new Match('pq', par.hue.newGroup(2))))
 commands['image/gamma'] = image.newChild('Gamma', new Pattern('5B 0p', new Match('p', par.gamma.newGroup(1))))
 commands['image/noiseReduction'] = image.newChild(
 	'Noise Reduction',
@@ -469,12 +470,10 @@ for (const [key, name, core] of [
 ]) {
 	addInquiry(key, name, core, new Pattern('00 00 0p 0q', new Match('pq', par.positionAnswer.newGroup(2))))
 }
-for (const [key, name, core] of [
-	['colorGain', 'Color Gain', '04 49'],
-	['hue', 'Hue', '04 4F'],
-]) {
+for (const [key, name, core] of [['colorGain', 'Saturation (Color Gain)', '04 49']]) {
 	addInquiry(key, name, core, new Pattern('00 00 00 0p', new Match('p', par.levelAnswer.newGroup(1))))
 }
+addInquiry('hue', 'Hue', '04 4F', new Pattern('00 00 0p 0q', new Match('pq', par.positionAnswer.newGroup(2))))
 for (const [key, name, core] of [
 	['backlight', 'Backlight Compensation', '04 33'],
 	['wdr', 'Wide Dynamic Range', '04 3D'],

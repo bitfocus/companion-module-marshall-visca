@@ -312,7 +312,7 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 	addSection(
 		'exposure',
 		'Exposure / Iris',
-		'AE mode and exposure values. Iris, shutter and gain can only be changed in the matching AE mode (e.g. Manual or Iris Priority).',
+		'AE mode and exposure values, each only works in the matching AE mode: iris in Manual/Iris Priority, shutter in Manual/Shutter Priority, gain in Manual, bright in Bright, exposure compensation and backlight in Auto.',
 		{
 			...modeButtons('ae_mode', 'exposure_mode', 'ae_mode', 'ae_mode', [
 				['Full Auto', 'AE\nAUTO'],
@@ -346,14 +346,29 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 				[action('exposure_compensation_down')],
 			),
 			...onOffButtons('backlight', 'BACKLIGHT', 'exposure_backlight'),
-			...onOffButtons('wdr', 'WDR', 'exposure_wdr'),
 		},
 	)
+
+	/** AE modes in which the exposure buttons work (CV612 user manual) */
+	const exposureNotes = {
+		iris: 'Only works in AE mode Manual or Iris Priority.',
+		shutter: 'Only works in AE mode Manual or Shutter Priority.',
+		gain: 'Only works in AE mode Manual (on the CV612 also Shutter Priority).',
+		bright: 'Only works in AE mode Bright.',
+		exposure_compensation: 'Only works in AE mode Full Auto.',
+		backlight: 'Only works in AE mode Full Auto.',
+	}
+	for (const [prefix, notes] of Object.entries(exposureNotes)) {
+		for (const suffix of ['up', 'down', 'on', 'off']) {
+			const preset = presets[`${prefix}_${suffix}`]
+			if (preset?.type === 'simple') preset.notes = notes
+		}
+	}
 
 	addSection(
 		'color',
 		'Color / White Balance',
-		'White balance mode, red/blue gain (only in Manual mode), color gain (saturation) and hue',
+		'White balance mode, red/blue gain (only in Manual mode), saturation and hue',
 		{
 			...modeButtons('white_balance', 'white_balance_mode', 'white_balance_mode', 'white_balance_mode', [
 				['Auto', 'WB\nAUTO'],
@@ -381,8 +396,8 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 			),
 			...upDownButtons(
 				'color_gain',
-				'COLOR',
-				'color_gain',
+				'SAT',
+				'saturation',
 				[action('image_adjust', { setting: 'color_gain', step: 1 })],
 				[action('image_adjust', { setting: 'color_gain', step: -1 })],
 			),

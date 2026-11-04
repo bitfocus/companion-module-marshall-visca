@@ -40,7 +40,7 @@ const payloads = [
 	['exposure/backlight', { State: 'Off' }, '81 01 04 33 03 FF'],
 	['image/aperture/direct', { Aperture: 10 }, '81 01 04 42 00 00 00 0A FF'],
 	['image/colorGain', { 'Color Gain': 4 }, '81 01 04 49 00 00 00 04 FF'],
-	['image/hue', { Hue: 9 }, '81 01 04 4F 00 00 00 09 FF'],
+	['image/hue', { Hue: 20 }, '81 01 04 4F 00 00 01 04 FF'],
 	['image/noiseReduction', { 'Noise Reduction Level': 3 }, '81 01 04 53 03 FF'],
 	['image/flip', { State: 'On' }, '81 01 04 66 02 FF'],
 	['image/defog', { State: 'On' }, '81 01 04 37 02 00 FF'],
@@ -106,7 +106,7 @@ const answers = [
 	['irisPosition', '81 09 04 4B FF', '90 50 00 00 01 05 FF', { Position: 0x15 }],
 	['redGain', '81 09 04 43 FF', '90 50 00 00 04 0A FF', { Position: 0x4a }],
 	['colorGain', '81 09 04 49 FF', '90 50 00 00 00 05 FF', { Level: 5 }],
-	['hue', '81 09 04 4F FF', '90 50 00 00 00 07 FF', { Level: 7 }],
+	['hue', '81 09 04 4F FF', '90 50 00 00 01 0E FF', { Position: 30 }],
 	['backlight', '81 09 04 33 FF', '90 50 03 FF', { State: 'Off' }],
 	['wdr', '81 09 04 3D FF', '90 50 02 FF', { State: 'On' }],
 	[

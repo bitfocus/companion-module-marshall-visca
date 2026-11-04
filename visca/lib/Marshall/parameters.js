@@ -52,6 +52,6 @@ export const exposureCompensation = new Range('Exposure Compensation', 0x00, 0x0
 export const aperture = new Range('Aperture', 0x00, 0x0f, 'Sharpness, 0 (Low) to 15 (High)')
 export const noiseReduction = new Range('Noise Reduction Level', 0, 5, '0 (Off) to 5 (High)')
 export const gamma = new Range('Gamma', 0, 4, 'Gamma table depends on the model')
-export const colorGain = new Range('Color Gain', 0x00, 0x0e, 'Saturation, 0 (Low) to 14 (High)')
-export const hue = new Range('Hue', 0x00, 0x0e, `${0x07} is neutral`)
+export const colorGain = new Range('Color Gain', 0x00, 0x0e, 'Saturation: 0 = 60 %, 4 = 100 %, 14 = 200 %')
+export const hue = new Range('Hue', 0x00, 0x1e, '0 = -15, 15 = neutral, 30 = +15')
 export const panTiltLimitCorner = new List('Corner', Object.keys(lut.panTiltLimitCornerArray))
