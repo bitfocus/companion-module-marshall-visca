@@ -1,16 +1,39 @@
 {
-  "name": "marshall-ptz-camera",
-  "version": "0.0.1",
-  "description": "Marshall PTZ Camera plugin for Companion",
-  "keywords": ["Camera", "PTZ", "VISCA"],
-  "product": [
-    "CV630-IP"
-  ],
-  "manufacturer": "Marshall",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Steffen Zeile",
-  "license": "MIT"
+	"name": "marshall-visca",
+	"version": "0.1.0",
+	"description": "Controls Marshall CV PTZ and POV cameras over VISCA over IP",
+	"main": "src/main.js",
+	"type": "module",
+	"scripts": {
+		"format": "prettier -w .",
+		"package": "companion-module-build",
+		"test": "node --test \"visca/test/*.test.js\" \"src/**/*.test.js\"",
+		"typecheck": "tsc -p ."
+	},
+	"keywords": [
+		"Camera",
+		"PTZ",
+		"VISCA"
+	],
+	"author": "Steffen Zeile",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-marshall-visca.git"
+	},
+	"engines": {
+		"node": "^22.20 || ^26",
+		"yarn": "^4"
+	},
+	"dependencies": {
+		"@companion-module/base": "~2.2.2"
+	},
+	"devDependencies": {
+		"@companion-module/tools": "^3.2.0",
+		"@types/node": "^22",
+		"prettier": "^3.9.10",
+		"typescript": "^7.0.2"
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json",
+	"packageManager": "yarn@4.18.1"
 }
