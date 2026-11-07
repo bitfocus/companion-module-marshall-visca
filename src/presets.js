@@ -186,7 +186,9 @@ export function getPresetDefinitions(label, cameras, { actions, feedbacks }) {
 					direction,
 					`${arrow}\n${direction}`,
 					[action('pan_tilt_move', { direction })],
-					[action('pan_tilt_stop')],
+					// Stops with the speeds of the drive: a stop with speed 1 lets diagonal moves end with an
+					// extra tilt movement on Marshall cameras
+					[action('pan_tilt_move', { direction: 'Stop' })],
 				),
 			]),
 			['pan_tilt_home', press('Home', 'HOME', [action('pan_tilt_home')])],

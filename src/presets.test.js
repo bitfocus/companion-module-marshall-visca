@@ -91,3 +91,27 @@ test('focus buttons move while held and stop on release', () => {
 		)
 	}
 })
+
+test('pan/tilt buttons stop with the speeds of the drive', () => {
+	/** @type {{ command: any, parameterDict: Record<string, any> }[]} */
+	const sent = []
+	const self = /** @type {any} */ ({
+		speed: { pan: 12, tilt: 10, zoom: 4 },
+		sendCommand: (command, parameterDict) => sent.push({ command, parameterDict }),
+	})
+	const actions = getActionDefinitions(self)
+	const { presets } = getPresetDefinitions('cam', [{ number: 1 }], { ...definitions, actions })
+
+	const [step] = presets.pan_tilt_up_right.steps
+	for (const entry of [...step.down, ...step.up]) {
+		actions[entry.actionId].callback(/** @type {any} */ ({ options: { camera: 0, ...entry.options } }))
+	}
+	assert.deepStrictEqual(
+		sent.map(({ parameterDict }) => parameterDict),
+		[
+			{ 'Pan Speed': 12, 'Tilt Speed': 10, Direction: 'Up Right' },
+			{ 'Pan Speed': 12, 'Tilt Speed': 10, Direction: 'Stop' },
+		],
+	)
+	assert.ok(sent.every(({ command }) => command.name === 'Drive'))
+})

@@ -38,7 +38,7 @@ So one page with pan/tilt, zoom, presets and color buttons controls whichever ca
 - **Power**, **Tally**, **Resolution**, **HDMI Output Range**, **Curve Tracking**, **Initialize Lens**
 - **Custom VISCA Command**: sends any command, e.g. `81 01 04 07 02 FF`
 
-For continuous movements use a move/drive action on press and the matching stop on release, like the presets do.
+For continuous movements use a move/drive action on press and the matching stop on release, like the presets do. For pan/tilt, stop with _Pan Tilt - Move (Module Speed)_ or _Pan Tilt - Drive_ and direction _Stop_: it stops with the speeds of the drive, so diagonal moves end without an extra tilt movement. _Pan Tilt - Stop_ stops with speed 1.
 
 Not every model supports every command or value. The camera answers unsupported commands with an error, which is shown in the log.
 

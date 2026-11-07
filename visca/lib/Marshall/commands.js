@@ -262,7 +262,11 @@ commands['panTilt/drive'] = panTilt.newChild(
 		new Match('yz', panTiltDirectionGroup),
 	]),
 )
-commands['panTilt/stop'] = panTilt.newChild('Stop', new Pattern('01 01 01 03 03'))
+commands['panTilt/stop'] = panTilt.newChild(
+	'Stop',
+	new Pattern('01 01 01 03 03'),
+	'Stops with speed 1. To stop a diagonal move smoothly, use Drive or Move (Module Speed) with direction Stop.',
+)
 commands['panTilt/home'] = panTilt.newChild('Home', new Pattern('04'))
 commands['panTilt/reset'] = panTilt.newChild('Reset', new Pattern('05'), 'Recalibrates the pan/tilt mechanics')
 
